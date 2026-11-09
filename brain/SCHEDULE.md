@@ -786,3 +786,171 @@ Rencana:
 
 Hasil yang Diharapkan:
 Sistem multi-tenant memiliki pertahanan anti-bypass 100%: popup banned muncul seketika secara real-time, dan tidak ada cara bagi tenant untuk menyambungkan bot WhatsApp selama akun berstatus suspended.
+
+---
+
+[23.0] - REFACTORING ARSITEKTUR MODULAR PENUH ADMIN-FRONTEND DAN ADMIN-BACKEND
+
+- Tanggal: 2026-11-06 22:50
+- Status: Completed
+
+Tujuan:
+Memecah seluruh kode monolitik pada dashboard Master Admin (admin-frontend yang berukuran >1.700 baris di App.tsx serta admin-backend pada adminRoutes.ts dan tenantManager.ts) ke dalam komponen, modul rute, dan layanan bisnis yang terisolasi, rapi, dan mudah dikembangkan di masa mendatang, selaras dengan standar arsitektur pada frontend dan backend dashboard bot.
+
+Rencana:
+1. Tahap 1: Modularisasi Arsitektur admin-backend:
+   - Buat tipe data terpusat di admin-backend/types/admin.types.ts.
+   - Buat fungsi utilitas di admin-backend/utils/phoneUtils.ts dan generatorUtils.ts.
+   - Pecah layanan bisnis di admin-backend/services/ (adminAuthService.ts, tenantService.ts, tenantStatusService.ts, adminMessagingService.ts) dengan tetap menjaga kompatibilitas ekspor di tenantManager.ts.
+   - Pecah rute API Express di admin-backend/routes/ (authAdminRoutes.ts, statsRoutes.ts, tenantRoutes.ts, messageRoutes.ts, impersonateRoutes.ts) dan agregasikan di adminRoutes.ts.
+2. Tahap 2: Modularisasi Arsitektur admin-frontend:
+   - Buat tipe data terpusat di admin-frontend/src/types/admin.types.ts.
+   - Buat fungsi utilitas format telepon di admin-frontend/src/utils/phoneHelper.ts.
+   - Buat komponen layout navbar di admin-frontend/src/components/layout/AdminHeader.tsx.
+   - Buat kartu metrik di admin-frontend/src/components/dashboard/StatCards.tsx.
+   - Buat kontrol pencarian & filter di admin-frontend/src/components/dashboard/TableControls.tsx.
+   - Buat baris dan kontainer tabel penyewa 14 kolom di admin-frontend/src/components/dashboard/TenantTableRow.tsx dan TenantTable.tsx.
+   - Buat modul modal terpisah di admin-frontend/src/components/modals/ (AddTenantModal.tsx, ExtendTenantModal.tsx, ResetPasswordModal.tsx, SendMessageModal.tsx, DeleteTenantModal.tsx, ToggleSuspendModal.tsx).
+   - Rampingkan admin-frontend/src/App.tsx menjadi file orkestrator ringkas (~120-150 baris).
+3. Tahap 3: Verifikasi dan Pengujian:
+   - Jalankan compile_applet dan lint_applet untuk memastikan nol error kompilasi dan tipe data.
+   - Verifikasi fungsionalitas seluruh fitur Master Admin.
+4. Tahap 4: Dokumentasi:
+   - Catat proses dan hasil di brain/LANGKAH_IMPLEMENTASI.md dan brain/PROGRESS.md.
+
+Hasil yang Diharapkan:
+Seluruh codebase admin-frontend dan admin-backend terstruktur rapi, modular, mudah dibaca, mudah dirawat, dan siap untuk ekspansi fitur selanjutnya tanpa file monolitik.
+
+---
+
+[24.0] - DESAIN ULANG DASHBOARD MASTER: PENYELARASAN TEMA CLEAN LIGHT DAN PEMBUATAN NAVBAR SIDEBAR
+
+- Tanggal: 2026-11-06 23:20
+- Status: Completed
+
+Tujuan:
+Menyelaraskan tampilan antarmuka visual Dashboard Master Admin (admin-frontend) agar 100% menggunakan bahasa desain, color palette resmi, dan komponen visual yang sama dengan Dashboard Bot (frontend), serta menambahkan layout Navbar Sidebar responsif untuk mendukung ekspansi fitur baru di masa depan.
+
+Rencana:
+1. Menyiapkan catatan implementasi teknis lengkap di brain/LANGKAH_IMPLEMENTASI.md (entri [42.0]).
+2. Membuat komponen AdminSidebar.tsx di admin-frontend/src/components/layout/AdminSidebar.tsx:
+   - Identitas logo Wanzt Apartemen dengan ikon Building2 berlatar biru #0084D1.
+   - Navigasi tab: Daftar Unit Bot, Statistik Platform, Pesan Siaran, dan Pengaturan Master.
+   - Indikator aktif bergaris vertikal kiri #0084D1 dan background tint #0084D1/10 (identik dengan DesktopSidebar bot).
+   - Profil Super Admin di bagian bawah sidebar dengan badge status Akses Penuh dan tombol pintas Buka Web Toko.
+   - Dukungan drawer responsif di mobile dengan backdrop dan tombol tutup.
+3. Menyelaraskan AdminHeader.tsx:
+   - Mengubah dari navbar fixed gelap menjadi Topbar Workspace terang (bg-white/80 border-b border-slate-200/80 backdrop-blur-md).
+   - Menambahkan tombol hamburger mobile untuk membuka sidebar.
+   - Menampilkan judul tab aktif dan tombol aksi Buka Web Toko serta Muat Ulang Data.
+4. Menyelaraskan Komponen Dashboard ke Clean Light Theme:
+   - StatCards.tsx: Kartu metrik berlatar putih bersih (bg-white border-slate-200/90 rounded-2xl shadow-xs), angka kontras gelap (text-slate-900), dan ikon berwarna lembut.
+   - TableControls.tsx: Filter status pill (bg-[#0084D1] text-white saat aktif, bg-slate-100 text-slate-600 saat inaktif), kolom search dan select sort bg-white border-slate-300 text-slate-800.
+   - TenantTableRow.tsx & TenantTable.tsx: Header thead bg-slate-50 text-slate-600, baris tr hover:bg-slate-50/70 border-slate-100, badge status aktif/suspend/expired yang jelas dan kontras tinggi.
+5. Menyelaraskan Seluruh Modal di admin-frontend/src/components/modals/:
+   - Mengubah latar modal dari slate-900 gelap menjadi bg-white border-slate-200 rounded-2xl shadow-2xl.
+   - Menyesuaikan form input ke bg-slate-50 border-slate-300 text-slate-900.
+   - Menyelaraskan tombol aksi utama dengan warna brand #0084D1 (hover #0073B7).
+6. Mengintegrasikan Layout di admin-frontend/src/App.tsx:
+   - Membungkus halaman dengan struktur dua kolom (AdminSidebar + Main Workspace).
+   - Menghubungkan state selectedNavTab dan mobile sidebar toggle.
+7. Memverifikasi dengan compile_applet dan lint_applet serta memastikan nol em-dash.
+8. Mencatat penyelesaian di brain/PROGRESS.md.
+
+Hasil yang Diharapkan:
+Dashboard Master Admin memiliki tampilan profesional, modern, bersih (clean light theme #0084D1), memiliki navbar sidebar yang nyaman digunakan di desktop maupun mobile, dan selaras sempurna dengan Dashboard Bot.
+
+---
+
+[25.0] - PEMINDAHAN TITIK AKSES DASHBOARD MASTER: PENGHAPUSAN DARI DASHBOARD BOT DAN POPUP BANNED, PENEMPATAN DI HALAMAN LOGIN
+
+- Tanggal: 2026-11-06 23:48
+- Status: Completed
+
+Tujuan:
+Merespons instruksi pengguna untuk menyederhanakan dan mengamankan titik masuk (entry point) ke Dashboard Master Admin:
+1. Menghapus tombol akses ke Dashboard Master yang sebelumnya ada di dalam dashboard bot (DesktopTopNav.tsx dan Navbar.tsx) agar pengguna/penyewa biasa tidak melihat tombol admin gedung saat sedang mengoperasikan toko.
+2. Menghapus tombol akses Dashboard Master dari popup akun ditangguhkan (SuspendedAccountModal.tsx).
+3. Menempatkan tombol akses resmi ke Dashboard Master pada menu/halaman login (LoginPage.tsx) agar pemilik/master admin dapat langsung masuk ke portal admin dengan cepat dan mudah sebelum login toko.
+
+Rencana:
+1. Mencatat rencana implementasi teknis di brain/LANGKAH_IMPLEMENTASI.md (entri [43.0]).
+2. Menghapus tombol Master Apartemen dari DesktopTopNav.tsx dan membersihkan impor Building2 yang tidak digunakan.
+3. Menghapus tombol Master dari Navbar.tsx dan membersihkan impor Building2 yang tidak digunakan.
+4. Menghapus tombol Dashboard Master dari SuspendedAccountModal.tsx dan merapikan tata letak tombol aksi modal.
+5. Menambahkan tombol akses resmi "Masuk ke Dashboard Master Admin" di LoginPage.tsx dengan ikon Building2, desain bersih, dan tautan langsung ke /admin/.
+6. Menjalankan verifikasi kompilasi dan linting (compile_applet dan lint_applet).
+7. Mencatat penyelesaian di brain/PROGRESS.md dan memperbarui status rencana.
+
+Hasil yang Diharapkan:
+Dashboard bot bersih dari tombol master admin saat sedang digunakan oleh tenant toko maupun saat akun suspended, dan tombol dashboard master tersedia strategis di halaman login.
+
+---
+
+[26.0] - PERANCANGAN DAN PENGEMBANGAN REST API KOLABORATOR (PARTNER / RESELLER API) UNTUK PENJUALAN SEWA BOT OTOMATIS
+
+- Tanggal: 2026-11-07 05:46
+- Status: Planned
+
+Tujuan:
+Membuka kanal integrasi bagi mitra kolaborasi/reseller agar dapat menjual jasa sewa bot WhatsApp secara otomatis melalui antarmuka REST API publik berotentikasi, di mana server secara instan membuat akun unit bot baru dan mengembalikan kredensial (ID tenant, username, password, dan masa aktif sewa) langsung ke sistem kolaborator.
+
+Rencana:
+1. Tahap 1: Perancangan Skema Database Kemitraan (database/master.db):
+   - Tabel `collaborator_api_keys`: id, name, api_key_hash, prefix_key, status (active/suspended), quota_or_balance, created_at, webhook_url.
+   - Tabel `collaborator_logs`: id, collaborator_id, tenant_id, duration_days, timestamp, request_ip.
+2. Tahap 2: Middleware Keamanan & Autentikasi API Key:
+   - Header autentikasi `x-api-key` atau `Bearer <token>` dengan verifikasi cepat dan aman.
+   - Fitur rate limiting untuk mencegah serangan brute force / spam pembuatan akun.
+3. Tahap 3: Pembuatan Endpoint REST API Publik Mitra:
+   - `POST /api/v1/partner/tenants/create`: Menerima parameter durasi hari sewa, nama toko (opsional), nama owner (opsional), no wa owner (opsional).
+   - Memanggil `TenantService.createTenant()` yang telah memiliki kemampuan auto-generate ID bot, username terstruktur, dan password acak.
+   - Mengembalikan respon JSON terstruktur berisi: status, tenant_id, username, password, days_active, expires_at, login_url, dan pesan panduan.
+   - Endpoint pendukung: `GET /api/v1/partner/tenants/:id` (cek status masa aktif tenant) dan `POST /api/v1/partner/tenants/:id/extend` (perpanjang masa sewa oleh reseller).
+4. Tahap 4: Antarmuka Manajemen Kolaborator di Dashboard Master Admin (admin-frontend):
+   - Menu kelola API Key Kolaborator di tab Pengaturan Master / Tab Kemitraan: Generate API Key baru, pantau unit yang dibuat oleh masing-masing kolaborator, dan status kemitraan.
+5. Tahap 5: Dokumentasi Integrasi Resmi untuk Kolaborator:
+   - Format contoh request (cURL, NodeJS/Axios, PHP/cURL, Python) dan format respon JSON sukses/gagal.
+6. Tahap 6: Pengujian dan Verifikasi:
+   - Uji coba pembuatan akun via request API eksternal (Postman/curl).
+   - Verifikasi isolasi database tenant yang terbentuk dan kesiapan login di dashboard bot.
+
+Hasil yang Diharapkan:
+Kolaborator atau reseller dapat mengintegrasikan penjualan sewa bot ke sistem kasir/website mereka sendiri secara otomatis 24/7 tanpa perlu intervensi manual dari Master Admin.
+
+---
+
+[27.0] - SISTEM TOKEN LISENSI VOUCHER PERPANJANGAN MASA SEWA BOT DAN HALAMAN REDEEM TENANT
+
+- Tanggal: 2026-11-07 05:59
+- Status: Planned
+
+Tujuan:
+Menerapkan sistem perpanjangan masa sewa bot mandiri berbasis kode token sekali pakai (single-use voucher):
+1. Admin dan Mitra Kolaborator dapat membuat kode unik acak dengan input durasi hari sewa (misal 30 hari).
+2. Kode token bersifat universal (dapat dipakai oleh tenant bot mana pun) namun hanya dapat digunakan 1 kali saja.
+3. Tenant memiliki halaman sederhana di dashboard bot untuk memasukkan kode token dan seketika memperpanjang masa aktif bot tanpa perlu konfirmasi manual.
+
+Rencana:
+1. Tahap 1: Skema Database Token di `database/master.db`:
+   - Tabel `extension_tokens`: `id`, `token_code` (unique, misal `EXT-7A9B-X12K`), `duration_days`, `status` ('available', 'used', 'revoked'), `created_by` ('admin', 'partner_api'), `used_by_tenant_id`, `used_at`, `created_at`.
+2. Tahap 2: Backend Service Token Manager:
+   - Fungsi generate kode acak alfanumerik terstruktur dan aman (`generatorUtils.ts`).
+   - Fungsi verifikasi dan redeem token: Menambahkan sisa hari ke masa aktif tenant aktif (`expires_at`), mengubah status token menjadi 'used', serta memulihkan status akun ke 'active' jika sebelumnya expired/suspended.
+3. Tahap 3: API Endpoint Master Admin & Partner:
+   - `POST /api/admin/tokens/create`: Pembuatan token via Dashboard Master (durasi hari & jumlah token yang ingin digenerate).
+   - `GET /api/admin/tokens`: Daftar riwayat seluruh token (tersedia, terpakai, expired).
+   - `POST /api/v1/partner/tokens/create`: Pembuatan token otomatis via API untuk mitra kolaborator tunggal.
+4. Tahap 4: API Endpoint Tenant & Halaman Redeem di Dashboard Bot:
+   - `POST /api/tenant/redeem-token`: Endpoint penukaran token bagi tenant yang sedang login.
+   - Halaman/Tab baru di Dashboard Bot ('Perpanjang Masa Aktif' / 'Masa Sewa'):
+     * Kartu informasi masa aktif saat ini (sisa hari & tanggal kedaluwarsa).
+     * Satu kolom input teks 'Kode Token Perpanjangan' dan tombol aksi 'Gunakan Token'.
+     * Feedback pesan sukses instan dan animasi perpanjangan masa sewa.
+5. Tahap 5: Pengujian dan Verifikasi:
+   - Uji pembuatan token di Master Admin dan via API.
+   - Uji penukaran kode token oleh akun tenant: pastikan sisa hari bertambah dengan benar.
+   - Uji penggunaan ulang token yang sama: pastikan sistem menolak dengan pesan 'Token sudah pernah digunakan'.
+
+Hasil yang Diharapkan:
+Tenant dapat membeli token dari mitra kolaborator dan memperpanjang masa sewa bot secara mandiri 24/7 dengan mudah dan aman.

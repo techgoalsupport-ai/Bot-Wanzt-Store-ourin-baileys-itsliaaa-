@@ -1677,3 +1677,214 @@ Rencana Pengujian:
 Hasil yang Diharapkan:
 Fitur pengiriman pesan dari Master Admin ke owner tenant berfungsi sempurna dengan antarmuka modal yang elegan dan fungsional.
 
+---
+
+[41.0] - REFACTORING ARSITEKTUR MODULAR PENUH ADMIN-FRONTEND DAN ADMIN-BACKEND
+
+- Tanggal: 2026-11-06 22:51
+- Status: Completed
+Referensi SCHEDULE: 23.0
+
+Tujuan Implementasi:
+1. Memecah arsitektur monolitik admin-backend:
+   - Memisahkan tipe data, utilitas generator/telepon, layanan bisnis (auth, tenant CRUD, status/suspend, messaging), dan rute API Express per domain tugas.
+   - Menjaga backward compatibility penuh pada tenantManager.ts dan adminRoutes.ts sehingga server.ts dan backend bot tidak mengalami breaking changes.
+2. Memecah arsitektur monolitik admin-frontend:
+   - Memisahkan tipe data ke types/admin.types.ts dan helper telepon ke utils/phoneHelper.ts.
+   - Memecah tampilan dashboard ke komponen mandiri: AdminHeader, StatCards, TableControls, TenantTableRow, dan TenantTable.
+   - Memecah seluruh modal pop-up ke modul terpisah: AddTenantModal, ExtendTenantModal, ResetPasswordModal, SendMessageModal, DeleteTenantModal, dan ToggleSuspendModal.
+   - Mengubah App.tsx menjadi orkestrator ringkas (~120-150 baris).
+
+Bagian yang Akan Diubah/Dibuat:
+- admin-backend:
+  * "admin-backend/types/admin.types.ts" (Baru)
+  * "admin-backend/utils/phoneUtils.ts" (Baru)
+  * "admin-backend/utils/generatorUtils.ts" (Baru)
+  * "admin-backend/services/adminAuthService.ts" (Baru)
+  * "admin-backend/services/tenantService.ts" (Baru)
+  * "admin-backend/services/tenantStatusService.ts" (Baru)
+  * "admin-backend/services/adminMessagingService.ts" (Baru)
+  * "admin-backend/services/tenantManager.ts" (Refactor facade)
+  * "admin-backend/routes/authAdminRoutes.ts" (Baru)
+  * "admin-backend/routes/statsRoutes.ts" (Baru)
+  * "admin-backend/routes/tenantRoutes.ts" (Baru)
+  * "admin-backend/routes/messageRoutes.ts" (Baru)
+  * "admin-backend/routes/impersonateRoutes.ts" (Baru)
+  * "admin-backend/routes/adminRoutes.ts" (Refactor agregator)
+- admin-frontend:
+  * "admin-frontend/src/types/admin.types.ts" (Baru)
+  * "admin-frontend/src/utils/phoneHelper.ts" (Baru)
+  * "admin-frontend/src/components/layout/AdminHeader.tsx" (Baru)
+  * "admin-frontend/src/components/dashboard/StatCards.tsx" (Baru)
+  * "admin-frontend/src/components/dashboard/TableControls.tsx" (Baru)
+  * "admin-frontend/src/components/dashboard/TenantTableRow.tsx" (Baru)
+  * "admin-frontend/src/components/dashboard/TenantTable.tsx" (Baru)
+  * "admin-frontend/src/components/modals/AddTenantModal.tsx" (Baru)
+  * "admin-frontend/src/components/modals/ExtendTenantModal.tsx" (Baru)
+  * "admin-frontend/src/components/modals/ResetPasswordModal.tsx" (Baru)
+  * "admin-frontend/src/components/modals/SendMessageModal.tsx" (Baru)
+  * "admin-frontend/src/components/modals/DeleteTenantModal.tsx" (Baru)
+  * "admin-frontend/src/components/modals/ToggleSuspendModal.tsx" (Baru)
+  * "admin-frontend/src/App.tsx" (Refactor ramping)
+
+Alasan Perubahan:
+File monolitik (khususnya App.tsx berukuran >1.700 baris) membuat proses pengembangan, pembacaan kode, dan pemeliharaan menjadi lambat dan berisiko tinggi terjadi regresi bug.
+
+Strategi Implementasi:
+1. Buat modul-modul admin-backend terlebih dahulu, pastikan fungsi statis TenantManager tetap diekspor sebagai penghubung ke service baru.
+2. Agregasikan rute admin di adminRoutes.ts menggunakan Express Router modular.
+3. Buat modul-modul tipe data dan komponen di admin-frontend/src/.
+4. Ganti isi App.tsx dengan memanggil komponen-komponen yang telah dibuat secara elegan.
+5. Jalankan compile_applet dan lint_applet bersamaan.
+6. Perbarui progres di dokumentasi.
+
+Urutan Pengerjaan:
+1. Buat file-file admin-backend (types, utils, services, routes).
+2. Refactor tenantManager.ts dan adminRoutes.ts.
+3. Buat file-file admin-frontend (types, utils, components/layout, components/dashboard, components/modals).
+4. Refactor App.tsx.
+5. Jalankan verifikasi compile_applet dan lint_applet.
+6. Update status implementasi di brain/LANGKAH_IMPLEMENTASI.md dan catat di brain/PROGRESS.md.
+
+Dampak Perubahan:
+Kode menjadi bersih, terisolasi, modular, mudah diuji, dan pengembangan fitur Master Admin di masa depan akan jauh lebih cepat.
+
+Rencana Pengujian:
+1. Verifikasi type checking tsc --noEmit melalui lint_applet.
+2. Verifikasi build Vite dan server melalui compile_applet.
+3. Pastikan semua endpoint API dan komponen UI tetap berfungsi 100% normal tanpa perubahan perilaku.
+
+Hasil yang Diharapkan:
+Codebase admin-frontend dan admin-backend terstruktur modular tanpa ada error kompilasi sedikitpun.
+
+---
+
+[42.0] - DESAIN ULANG DASHBOARD MASTER: PENYELARASAN TEMA CLEAN LIGHT DAN PEMBUATAN NAVBAR SIDEBAR
+
+- Tanggal: 2026-11-06 23:21
+- Status: Completed
+Referensi SCHEDULE: 24.0
+
+Tujuan Implementasi:
+1. Merombak visual antarmuka Dashboard Master Admin (admin-frontend) dari tema gelap (slate-950) menjadi Clean Light Theme bernuansa profesional, elegan, dan anti-AI slop.
+2. Menyelaraskan seluruh color palette, kartu, tipografi, dan badge status 100% identik dengan Dashboard Bot (frontend):
+   - Warna aksen utama: Sky Blue resmi Wanzt (#0084D1, hover #0073B7, active #00629E, tint bg-[#0084D1]/10).
+   - Background halaman: Clean Light (#F8FAFC / slate-50).
+   - Kartu & Kontainer: bg-white border border-slate-200/90 rounded-2xl shadow-xs.
+   - Tipografi: text-slate-900 (judul/angka), text-slate-600 (label/deskripsi), text-slate-400 (keterangan waktu/muted).
+   - Badges: Hijau emerald (aktif/online), Amber (suspended/peringatan), Rose (expired/offline).
+3. Membuat komponen Navbar Sidebar (AdminSidebar.tsx) di sisi kiri layar dengan menu navigasi vertikal:
+   - Daftar Unit Bot (tab aktif default, badge total unit)
+   - Statistik Platform (ringkasan analitik)
+   - Pesan Siaran (siaran massal ke tenant)
+   - Pengaturan Master (preferensi & kontak admin)
+   - Profil Super Admin di bagian bawah sidebar dengan badge status "Akses Penuh" dan tombol pintas "Buka Web Toko".
+   - Mendukung responsivitas mobile drawer dengan backdrop dan tombol tutup (X).
+4. Menyesuaikan AdminHeader.tsx menjadi Topbar Workspace bersih dengan tombol hamburger mobile, breadcrumb/judul tab aktif, tombol Buka Web Toko, dan tombol Muat Ulang.
+5. Menyelaraskan seluruh modal di admin-frontend/src/components/modals/ (AddTenantModal, ExtendTenantModal, ResetPasswordModal, SendMessageModal, DeleteTenantModal, ToggleSuspendModal) ke tema kartu putih bersih, form input slate-50/slate-300, dan tombol primer #0084D1.
+
+Bagian yang Akan Diubah/Dibuat:
+- "admin-frontend/src/components/layout/AdminSidebar.tsx" (Baru)
+- "admin-frontend/src/components/layout/AdminHeader.tsx" (Refactor tema terang & hamburger)
+- "admin-frontend/src/components/dashboard/StatCards.tsx" (Refactor kartu terang #0084D1)
+- "admin-frontend/src/components/dashboard/TableControls.tsx" (Refactor tab pill & filter terang)
+- "admin-frontend/src/components/dashboard/TenantTableRow.tsx" (Refactor baris tabel terang)
+- "admin-frontend/src/components/dashboard/TenantTable.tsx" (Refactor kontainer tabel terang)
+- "admin-frontend/src/components/modals/AddTenantModal.tsx" (Refactor tema modal terang)
+- "admin-frontend/src/components/modals/ExtendTenantModal.tsx" (Refactor tema modal terang)
+- "admin-frontend/src/components/modals/ResetPasswordModal.tsx" (Refactor tema modal terang)
+- "admin-frontend/src/components/modals/SendMessageModal.tsx" (Refactor tema modal terang)
+- "admin-frontend/src/components/modals/DeleteTenantModal.tsx" (Refactor tema modal terang)
+- "admin-frontend/src/components/modals/ToggleSuspendModal.tsx" (Refactor tema modal terang)
+- "admin-frontend/src/App.tsx" (Refactor layout sidebar + main workspace + tab switcher)
+
+Alasan Perubahan:
+Tampilan Dashboard Master sebelumnya masih menggunakan tema gelap monolitik (slate-950) yang sangat kontras dan berbeda jauh dari Dashboard Bot (frontend), sehingga tidak konsisten secara pengalaman visual pengguna dan belum memiliki navbar sidebar untuk menampung ekspansi fitur-fitur baru ke depan.
+
+Strategi Implementasi:
+1. Buat komponen layout AdminSidebar.tsx dengan gaya visual yang persis dengan DesktopSidebar di frontend (border vertikal biru pada item aktif, rounded, font semibold, profil admin di footer sidebar).
+2. Perbarui AdminHeader.tsx menjadi topbar yang fixed di atas area kerja utama (main workspace), terintegrasi dengan tombol pembuka sidebar mobile.
+3. Ubah styling StatCards.tsx: ganti warna kartu menjadi bg-white border border-slate-200/90, perhalus warna ikon dan badge tren persentase.
+4. Ubah styling TableControls.tsx: tab filter dibuat bergaya pill (aktif: bg-[#0084D1] text-white, inaktif: bg-slate-100 text-slate-600 hover:bg-slate-200), input search dan select sort diberi styling light theme dengan border slate-300.
+5. Ubah styling TenantTable.tsx dan TenantTableRow.tsx: header tabel thead bg-slate-50 text-slate-600, baris tr hover:bg-slate-50/70 divide-slate-100 text-slate-800, badge status dan tombol aksi yang selaras.
+6. Perbarui seluruh modal dialog: ubah wrapper dari bg-slate-900 ke bg-white border border-slate-200 shadow-2xl, ubah label teks ke text-slate-700 font-semibold, input ke bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:border-[#0084D1], dan tombol aksi utama bg-[#0084D1] hover:bg-[#0073B7].
+7. Perbarui App.tsx untuk menggabungkan AdminSidebar di kiri dan main workspace di kanan, serta mendukung pergantian tab dinamis.
+8. Uji kompilasi dengan compile_applet dan linting dengan lint_applet.
+9. Pastikan tidak ada karakter em-dash (—) di seluruh kode.
+
+Urutan Pengerjaan:
+1. Buat admin-frontend/src/components/layout/AdminSidebar.tsx.
+2. Refactor admin-frontend/src/components/layout/AdminHeader.tsx.
+3. Refactor admin-frontend/src/components/dashboard/StatCards.tsx.
+4. Refactor admin-frontend/src/components/dashboard/TableControls.tsx.
+5. Refactor admin-frontend/src/components/dashboard/TenantTableRow.tsx dan TenantTable.tsx.
+6. Refactor seluruh modul modal di admin-frontend/src/components/modals/.
+7. Refactor admin-frontend/src/App.tsx.
+8. Jalankan compile_applet dan lint_applet.
+9. Catat hasil di brain/PROGRESS.md dan perbarui status di SCHEDULE.md serta LANGKAH_IMPLEMENTASI.md.
+
+Dampak Perubahan:
+Tampilan antarmuka Dashboard Master Admin menjadi sangat rapi, profesional, seragam dengan Dashboard Bot toko, dan siap menampung fitur baru dengan navbar sidebar.
+
+Rencana Pengujian:
+1. Validasi typecheck dengan lint_applet (tsc --noEmit).
+2. Validasi kompilasi bundle dengan compile_applet.
+3. Verifikasi ketiadaan karakter em-dash pada seluruh file.
+4. Verifikasi bahwa semua fungsi (CRUD tenant, perpanjang sewa, suspend, kirim pesan, reset password, search, sort, filter) tetap berjalan normal 100%.
+
+Hasil yang Diharapkan:
+Dashboard Master Admin bertransformasi menjadi Clean Light Theme dengan navbar sidebar yang modern, ergonomis, bebas dari AI slop, dan selaras penuh dengan Dashboard Bot.
+
+---
+
+[43.0] - PEMINDAHAN TITIK AKSES DASHBOARD MASTER: PENGHAPUSAN DARI DASHBOARD BOT DAN POPUP BANNED, PENEMPATAN DI HALAMAN LOGIN
+
+- Tanggal: 2026-11-06 23:48
+- Status: Completed
+Referensi SCHEDULE: 25.0
+
+Tujuan Implementasi:
+1. Menghapus tombol rujukan ke Dashboard Master dari antarmuka dalam Dashboard Bot (DesktopTopNav.tsx dan Navbar.tsx).
+2. Menghapus tombol rujukan ke Dashboard Master dari popup akun ditangguhkan (SuspendedAccountModal.tsx).
+3. Menambahkan tautan/tombol rujukan yang elegan dan mudah diakses ke Dashboard Master Admin pada form halaman login (LoginPage.tsx).
+
+Bagian yang Akan Diubah:
+- "frontend/src/components/layout/DesktopTopNav.tsx" - Menghapus tombol "Master Apartemen" dan impor ikon Building2.
+- "frontend/src/components/layout/Navbar.tsx" - Menghapus tombol "Master" dan impor ikon Building2.
+- "frontend/src/components/modals/SuspendedAccountModal.tsx" - Menghapus tombol "Dashboard Master" dan impor ikon Building2, serta menata ulang tombol "Tutup Sementara" menjadi lebar penuh.
+- "frontend/src/components/auth/LoginPage.tsx" - Menambahkan kartu/tombol "Masuk ke Dashboard Master Admin" menuju rute /admin/ dengan ikon Building2 dan ExternalLink.
+
+Alasan Perubahan:
+Sesuai arahan pengguna, tombol akses ke dashboard master tidak boleh terlihat atau diakses dari dalam dashboard toko penyewa biasa maupun popup banned/suspend. Penempatan tombol di halaman login memberikan kemudahan akses bagi Master Admin sebelum login ke akun toko manapun.
+
+Strategi Implementasi:
+1. Di DesktopTopNav.tsx: hapus blok elemen button dengan onClick window.location.href = '/admin/' dan hapus import Building2 jika tidak ada pemakaian lain.
+2. Di Navbar.tsx: hapus blok elemen button dengan onClick window.location.href = '/admin/' dan hapus import Building2 jika tidak ada pemakaian lain.
+3. Di SuspendedAccountModal.tsx: hapus tombol Dashboard Master. Tombol onCloseTemporary dijadikan tombol w-full dengan border dan styling rapi di atas tombol logout. Hapus import Building2.
+4. Di LoginPage.tsx: tambahkan tombol navigasi ke /admin/ tepat di bawah kartu login utama, dengan gaya bersih: bg-white border border-slate-200/90 rounded-xl hover:bg-sky-50 text-slate-700 hover:text-[#0084D1] shadow-2xs.
+5. Jalankan compile_applet dan lint_applet untuk memastikan nol error.
+6. Catat progres di brain/PROGRESS.md dan perbarui status dokumentasi.
+
+Urutan Pengerjaan:
+1. Edit frontend/src/components/layout/DesktopTopNav.tsx.
+2. Edit frontend/src/components/layout/Navbar.tsx.
+3. Edit frontend/src/components/modals/SuspendedAccountModal.tsx.
+4. Edit frontend/src/components/auth/LoginPage.tsx.
+5. Uji coba kompilasi dan linting.
+6. Perbarui status di brain/LANGKAH_IMPLEMENTASI.md dan catat di brain/PROGRESS.md.
+
+Dampak Perubahan:
+Dashboard bot dan popup suspend menjadi murni untuk penyewa toko tanpa adanya tombol pengelola apartemen, sementara halaman login memiliki pintu masuk resmi ke Dashboard Master Admin.
+
+Rencana Pengujian:
+1. Validasi lint_applet (tsc --noEmit).
+2. Validasi compile_applet (Vite build).
+3. Pengecekan ketiadaan em-dash (—).
+4. Pastikan tautan /admin/ di LoginPage mengarah ke aplikasi Master Admin.
+
+Hasil yang Diharapkan:
+Tombol Dashboard Master berhasil dihapus dari DesktopTopNav, Navbar, dan SuspendedAccountModal, serta terpasang rapi di LoginPage.
+
+
+
+

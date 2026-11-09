@@ -1,5 +1,4 @@
-import React from 'react';
-import { AlertTriangle, MessageCircle, LogOut, ShieldAlert, X, Building2 } from 'lucide-react';
+import { AlertTriangle, MessageCircle, LogOut, ShieldAlert, X } from 'lucide-react';
 import { getMasterAdminWaLink, MASTER_ADMIN_PHONE } from '../../config/adminContact';
 
 interface SuspendedAccountModalProps {
@@ -101,34 +100,17 @@ export const SuspendedAccountModal: React.FC<SuspendedAccountModalProps> = ({
               <span>Hubungi Master Admin</span>
             </a>
 
-            <div className="grid grid-cols-2 gap-2.5">
-              {/* Tombol Tutup Sementara */}
-              {onCloseTemporary ? (
-                <button
-                  type="button"
-                  onClick={onCloseTemporary}
-                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-300 transition-colors cursor-pointer active:scale-[0.98]"
-                >
-                  <X className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Tutup Sementara</span>
-                </button>
-              ) : (
-                <div />
-              )}
-
-              {/* Tombol Langsung Masuk ke Master Admin */}
+            {/* Tombol Tutup Sementara */}
+            {onCloseTemporary && (
               <button
                 type="button"
-                onClick={() => {
-                  window.location.href = '/admin/';
-                }}
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-xl border border-indigo-200 transition-colors cursor-pointer active:scale-[0.98]"
-                title="Buka Portal Master Admin"
+                onClick={onCloseTemporary}
+                className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-300 transition-colors cursor-pointer active:scale-[0.98]"
               >
-                <Building2 className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Dashboard Master</span>
+                <X className="w-3.5 h-3.5 text-slate-500" />
+                <span>Tutup Sementara</span>
               </button>
-            </div>
+            )}
 
             <button
               type="button"

@@ -12,7 +12,6 @@ import {
   PanelLeftOpen,
   PanelLeftClose,
   Menu,
-  Building2,
 } from 'lucide-react';
 import {
   BotStatusResponse,
@@ -232,17 +231,6 @@ export const DesktopTopNav: React.FC<DesktopTopNavProps> = ({
           title="Klik untuk membuka Pengaturan Koneksi WhatsApp"
         >
           {getStatusBadge()}
-        </button>
-
-        {/* Tombol Akses Portal Apartemen Master Admin */}
-        <button
-          type="button"
-          onClick={() => (window.location.href = '/admin/')}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-800 border border-indigo-200 rounded-xl transition cursor-pointer shadow-2xs"
-          title="Buka Portal Apartemen / Master Admin (admin.wanma2.my.id)"
-        >
-          <Building2 className="w-3.5 h-3.5 text-indigo-600" />
-          <span className="hidden sm:inline">Master Apartemen</span>
         </button>
 
         {/* Logout Button */}

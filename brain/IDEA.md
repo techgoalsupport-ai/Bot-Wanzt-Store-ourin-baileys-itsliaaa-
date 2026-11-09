@@ -1101,3 +1101,97 @@ Potensi Penerapan:
 
 Catatan Tambahan:
 - Pastikan ada validasi kesamaan password baru dan konfirmasi password di frontend dan backend sebelum disimpan ke database.
+
+---
+
+[16.0] - ARSITEKTUR REST API KOLABORATOR UNTUK PENJUALAN OTOMATIS SEWA BOT (PARTNER/RESELLER API)
+
+- Tanggal: 2026-11-07 05:45
+- Sumber: Diskusi dan Permintaan Pengguna
+
+Informasi yang Dipelajari:
+1. Tujuan dan Model Bisnis Kolaborasi (Affiliate / Reseller / Partner Integration):
+   - Pengguna berniat membuka peluang kemitraan/kolaborasi di mana pihak ketiga (kolaborator/reseller/website affiliate) dapat menjual jasa sewa bot WhatsApp secara otomatis.
+   - Pihak kolaborator menembak endpoint REST API khusus saat ada transaksi/pembelian dari pelanggan mereka.
+   - Server merespon balik secara otomatis dengan membuat unit tenant baru dan memberikan kredensial lengkap yang siap diserahkan ke pembeli.
+
+2. Kebutuhan Data Input dan Output API:
+   - Data Input yang Diterima dari Kolaborator:
+     * API Key / Secret Token Kolaborator (identifikasi otorisasi mitra resmi).
+     * Durasi sewa dalam hari (misal 30, 60, 90, 365 hari).
+     * Data opsional profil pembeli: Nama Toko, Nama Pemilik, dan Nomor WhatsApp pembeli. Jika dikosongkan, sistem tetap dapat menggunakan mode instan otomatis.
+   - Data Respon Output yang Diberikan ke Kolaborator:
+     * ID Tenant unik (misal `t_kolaborator_8492` atau `t_tenant_9312`).
+     * Username login dashboard toko bot.
+     * Password login acak yang aman.
+     * Masa aktif (durasi hari, tanggal mulai aktif, dan tanggal kedaluwarsa).
+     * URL tautan login dashboard bot (misal `https://dashboard.domain.com/`).
+     * Status akun (`active`).
+
+3. Persyaratan Keamanan dan Tata Kelola API:
+   - Autentikasi API Key terenkripsi (misal `x-api-key` atau Bearer Token mitra).
+   - Validasi saldo/kuota kolaborator atau otorisasi mitra aktif di tabel `master.db` (misal tabel `collaborators` / `api_keys`).
+   - Rate limiting untuk mencegah abuse / spam pembuatan akun.
+   - Logging riwayat pembuatan akun per kolaborator untuk rekonsiliasi komisi / pembayaran.
+
+Pemahaman:
+- Konsep ini sangat realistis dan sangat mudah diintegrasikan karena fondasi pembuatan tenant otomatis (auto-generation ID, username, password, dan isolasi database-per-tenant) sudah selesai dibangun pada `admin-backend/services/tenantService.ts` dan `admin-backend/utils/generatorUtils.ts`.
+- Endpoint publik berotentikasi API Key dapat dipasang di `admin-backend` (misal `POST /api/partner/v1/create-tenant`) tanpa mengganggu alur operasional dashboard Master Admin yang sudah ada.
+
+Potensi Penerapan:
+1. Pembuatan tabel `collaborator_keys` pada `database/master.db` untuk mencatat daftar mitra resmi, status keaktifan, dan saldo/kuota.
+2. Pembuatan middleware otentikasi `collaboratorAuthMiddleware.ts`.
+3. Pembuatan controller `collaboratorApiController.ts` yang memanfaatkan fungsi yang sudah ada (`TenantService.createTenantAuto()` atau `TenantManager.createTenant()`).
+4. Penyediaan dokumentasi endpoint API (API Docs / Swagger / cURL example) untuk dibagikan ke mitra kolaborasi.
+
+Catatan Tambahan:
+- Ini merupakan tahap perencanaan awal. Tidak ada perubahan kode yang dilakukan sebelum disetujui pengguna.
+
+---
+
+[17.0] - SISTEM TOKEN VOUCHER PERPANJANGAN MASA SEWA BOT (SINGLE-USE EXTENSION TOKENS)
+
+- Tanggal: 2026-11-07 05:58
+- Sumber: Diskusi dan Penjelasan Kebutuhan Pengguna
+
+Informasi yang Dipelajari:
+1. Konteks Kemitraan Tunggal (Single Exclusive Collaborator):
+   - Bot ini dirancang untuk bekerja sama secara eksklusif dengan satu mitra/kolaborator utama.
+   - Kolaborator dapat menjual masa sewa awal maupun token perpanjangan masa sewa ke pembeli.
+
+2. Mekanisme Token Perpanjangan Sekali Pakai (One-Time License Token):
+   - Admin Utama dapat membuat kode unik token langsung melalui Dashboard Master Admin atau mitra dapat memintanya melalui API khusus.
+   - Input pembuatan token: Durasi hari perpanjangan sewa (misal 30 hari, 60 hari, 90 hari, 365 hari).
+   - Sistem secara otomatis membuat kode acak unik (misal `EXT-89FA-21K9` atau `WANZT-30D-K821A`).
+   - Sifat Token:
+     * Universal: Berlaku untuk seluruh akun tenant bot mana pun tanpa terikat ke ID bot tertentu di awal.
+     * Sekali Pakai (Single-Use): Hanya dapat digunakan 1 kali saja. Begitu digunakan oleh salah satu tenant, status token berubah menjadi 'used' dan dicatat riwayat penggunaannya (tenant ID, tanggal redeem).
+
+3. Halaman Redeem Token di Dashboard Bot Tenant:
+   - Menyediakan halaman atau sub-tab khusus di dashboard bot (misal tab 'Perpanjang Masa Aktif').
+   - Halaman dirancang minimalis dan mudah: hanya terdapat 1 kolom input kode token dan tombol verifikasi 'Perpanjang Bot Sekarang'.
+   - Ketika tenant memasukkan kode unik dan submit:
+     * Sistem memverifikasi validitas token di tabel database `master.db`.
+     * Jika valid dan belum terpakai, masa aktif bot tenant tersebut langsung bertambah sesuai durasi token.
+     * Jika bot berstatus suspended atau expired karena masa sewa habis, penukaran token otomatis mengaktifkan kembali bot dan membuka gembok suspensi.
+     * Tampilkan notifikasi sukses yang jelas beserta tanggal kedaluwarsa baru.
+
+Pemahaman:
+- Model token lisensi ini sangat fleksibel dan aman karena:
+  1. Mitra kolaborator dapat menjual token voucher seperti produk voucher fisik/digital (voucher 30 hari, 60 hari).
+  2. Tenant memiliki kendali penuh untuk memperpanjang bot mereka kapan saja tanpa perlu menunggu konfirmasi manual dari admin.
+  3. Mengurangi beban administrasi Master Admin dalam mengurus perpanjangan sewa harian.
+
+Potensi Penerapan:
+1. Skema Database SQLite di `database/master.db`:
+   - Tabel `extension_tokens`: `id`, `token_code` (unique), `duration_days`, `status` ('available' / 'used' / 'revoked'), `created_by` ('admin' / 'api_partner'), `used_by_tenant_id`, `used_at`, `created_at`.
+2. Backend Endpoint:
+   - Master Admin: `POST /api/admin/tokens/create` dan `GET /api/admin/tokens` (generate dan monitoring token).
+   - Partner API: `POST /api/v1/partner/tokens/create` (generate token via API mitra tunggal).
+   - Tenant Dashboard: `POST /api/tenant/redeem-token` (klaim token dan auto-extend masa sewa).
+3. Frontend Antarmuka:
+   - Dashboard Bot: Halaman/Tab 'Perpanjang Masa Aktif' dengan form penukaran kode unik.
+   - Dashboard Master Admin: Panel Manajemen Token di sidebar (buat token satuan/massal, pantau token aktif dan riwayat token terpakai).
+
+Catatan Tambahan:
+- Ini adalah tahap perencanaan dan kesepakatan konsep. Kode belum diubah.

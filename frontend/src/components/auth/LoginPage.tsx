@@ -1,5 +1,5 @@
-import React, { useState, FormEvent } from 'react';
-import { Lock, User, Eye, EyeOff, ShieldCheck, ArrowRight, AlertCircle, Bot } from 'lucide-react';
+import React, { useState, type FormEvent } from 'react';
+import { Lock, User, Eye, EyeOff, ShieldCheck, ArrowRight, AlertCircle, Bot, Building2, ExternalLink } from 'lucide-react';
 
 interface LoginPageProps {
   onLogin: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -146,8 +146,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           </div>
         </div>
 
+        {/* Akses Portal Master Admin */}
+        <div className="mt-4">
+          <a
+            href="/admin/"
+            className="w-full inline-flex items-center justify-between py-2.5 px-3.5 rounded-xl bg-white hover:bg-sky-50/60 text-slate-700 hover:text-sky-600 border border-slate-200/90 hover:border-sky-200 shadow-2xs transition-all cursor-pointer group text-xs font-semibold"
+            title="Buka Portal Apartemen / Master Admin"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-6 h-6 rounded-lg bg-sky-50 border border-sky-100 text-sky-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Building2 className="w-3.5 h-3.5" />
+              </div>
+              <span>Masuk ke Dashboard Master Admin</span>
+            </div>
+            <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-600 transition-colors" />
+          </a>
+        </div>
+
         {/* Informasi Bantuan */}
-        <p className="text-center text-xs text-slate-400 mt-5">
+        <p className="text-center text-xs text-slate-400 mt-4">
           Akun dashboard diberikan saat pembelian script bot.
         </p>
       </div>
