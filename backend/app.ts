@@ -9,6 +9,7 @@ import { mediaRouter } from './routes/mediaRoutes.ts';
 import { pricingRouter } from './routes/pricingRoutes.ts';
 import { promoRouter } from './routes/promoRoutes.ts';
 import { apartmentRouter } from './routes/apartmentRoutes.ts';
+import { tenantTemplateRouter } from './routes/tenantTemplateRoutes.ts';
 import { adminRouter } from '../admin-backend/routes/adminRoutes.ts';
 import { initMasterDatabase } from '../admin-backend/database/masterSqlite.ts';
 import { initTenantDb } from './database/tenantDbManager.ts';
@@ -117,6 +118,7 @@ export function createServerApp(): Express {
   // Mount API Routers
   app.use('/api/auth', authRouter);
   app.use('/api/bot', botRouter);
+  app.use('/api/bot', tenantTemplateRouter);
   app.use('/api/pricing', pricingRouter);
   app.use('/api/promos', promoRouter);
   app.use('/api/xaviera', xavieraRouter);

@@ -1195,3 +1195,177 @@ Potensi Penerapan:
 
 Catatan Tambahan:
 - Ini adalah tahap perencanaan dan kesepakatan konsep. Kode belum diubah.
+
+---
+
+[18.0] - ARSITEKTUR SISTEM MANAJEMEN TEMPLATE MESSAGE TERISOLASI BERBASIS KATEGORI (MASTER ADMIN & BOT DASHBOARD)
+
+- Tanggal: 2026-11-09 14:12
+- Sumber: Diskusi dan Permintaan Pengguna
+
+Informasi yang Dipelajari:
+1. Kebutuhan Manajemen Template Message Terpusat di Dashboard Master Admin:
+   - Admin Utama membutuhkan halaman khusus 'Template Message' di Dashboard Master untuk mengelola seluruh template pesan respon bot secara dinamis.
+   - Fitur-fitur utama di sisi Master Admin:
+     * Menampilkan daftar seluruh template yang tersedia beserta kategori fungsinya.
+     * Filter berdasarkan kategori fungsi template (Semua, Menu, List, Carousel, Invoice, Konfirmasi).
+     * Tambah Template Baru: Modal dialog form input yang berisi:
+       - Nama Template (misal 'Menu Elegan Ringkas', 'Invoice QRIS Lengkap').
+       - Fungsi / Kategori Template (dropdown pilihan: 'menu', 'list', 'carousel', 'invoice', 'confirmation').
+       - Isi Pesan Template (textarea teks dengan dukungan placeholder bot).
+       - Status awal (Aktif / Nonaktif).
+     * Edit Template: Mengubah nama, kategori, isi teks, dan status keaktifan.
+     * Toggle Aktif / Nonaktif: Tombol sakelar untuk menonaktifkan template tanpa menghapusnya dari database.
+     * Hapus Template: Menghapus template secara permanen dengan modal dialog konfirmasi in-app.
+
+2. Kebutuhan Integrasi di Sisi Dashboard Bot (Tenant):
+   - Di halaman 'Respon Bot' (TabCommand.tsx), pada masing-masing sub-tab editor respon bot (Menu, List, Carousel, Invoice, Konfirmasi), disediakan tombol aksi: 'Pilih Template'.
+   - Aturan Pemisahan Ketat (Strict Category Isolation):
+     * Template tidak boleh saling bercampur antar-kategori.
+     * Di sub-tab Menu: HANYA menampilkan template yang memiliki fungsi 'menu'.
+     * Di sub-tab List: HANYA menampilkan template yang memiliki fungsi 'list'.
+     * Di sub-tab Carousel: HANYA menampilkan template yang memiliki fungsi 'carousel'.
+     * Di sub-tab Invoice: HANYA menampilkan template yang memiliki fungsi 'invoice'.
+     * Di sub-tab Konfirmasi: HANYA menampilkan template yang memiliki fungsi 'confirmation'.
+     * Template yang berstatus nonaktif di Master Admin otomatis disembunyikan dari dashboard bot.
+   - Mekanisme Pengisian Otomatis:
+     * Ketika tenant memilih salah satu template dari modal galeri template, form textarea respon bot di sub-tab tersebut seketika terisi otomatis dengan teks template yang dipilih.
+     * Memberikan dialog konfirmasi ramah sebelum menimpa isi teks yang sudah diketik tenant sebelumnya.
+
+3. Skema Data & Endpoint Backend:
+   - Database Pusat (`database/master.db`):
+     * Tabel `message_templates`: `id`, `name`, `category`, `content`, `is_active` (1/0), `created_at`, `updated_at`.
+   - Endpoint Master Admin:
+     * `GET /api/admin/templates`: Mengambil seluruh template (aktif maupun nonaktif).
+     * `POST /api/admin/templates`: Membuat template baru.
+     * `PUT /api/admin/templates/:id`: Mengupdate nama, kategori, isi, dan status template.
+     * `PATCH /api/admin/templates/:id/status`: Toggle status aktif/nonaktif.
+     * `DELETE /api/admin/templates/:id`: Menghapus template.
+   - Endpoint Publik/Tenant:
+     * `GET /api/bot/templates?category=<category>`: Mengambil daftar template aktif untuk kategori tertentu.
+
+Pemahaman:
+- Sistem ini memberikan efisiensi tinggi bagi Master Admin untuk mendistribusikan format teks promosi dan respon bot terbaik kepada seluruh penyewa, sekaligus memudahkan penyewa menyusun respon bot tanpa harus mengetik dari nol atau salah menggunakan placeholder.
+- Pemisahan kategori menjamin pesan untuk invoice tidak akan pernah muncul saat penyewa sedang mengatur respon menu atau carousel.
+
+Potensi Penerapan:
+- Menambahkan tab 'Template Message' di `AdminSidebar.tsx` Master Admin.
+- Membuat komponen halaman `TabTemplates.tsx` di `admin-frontend/src/components/dashboard/tabs/TabTemplates.tsx`.
+- Membuat modal popup `AddEditTemplateModal.tsx` dan `DeleteTemplateModal.tsx`.
+- Membuat komponen picker `TemplatePickerModal.tsx` di `frontend/src/components/modals/TemplatePickerModal.tsx`.
+- Menghubungkan picker ke `TabCommand.tsx` di masing-masing sub-tab respon bot.
+
+Catatan Tambahan:
+- Kode belum diubah. Menjelaskan pemahaman ulang kepada pengguna sebelum implementasi.
+
+---
+
+[19.0] - SPESIFIKASI DAN ISOLASI 4 SUB-KATEGORI TEMPLATE PESAN PADA FITUR KONFIRMASI CHECKOUT
+
+- Tanggal: 2026-11-09 15:58
+- Sumber: Permintaan Pengguna
+
+Informasi yang Dipelajari:
+1. Struktur Respon Bot Sub-Tab Konfirmasi:
+   - Pada halaman Respon Bot (TabCommand.tsx) sub-tab 'Confirmation', terdapat 4 jenis respon bot mandiri yang masing-masing mengontrol alur checkout yang berbeda:
+     1. Ringkasan Pesan Order (Order Summary) - Pesan DM saat pembeli memilih varian produk di Carousel.
+     2. Permintaan Kode Input Promo - Pesan instruksi saat pembeli meminta memasukkan voucher/kupon promo (waktu tunggu 90 detik).
+     3. Pesan Jika Kode Promo Valid - Pesan sukses potongan diskon harga sebelum penerbitan invoice QRIS.
+     4. Pesan Jika Kode Promo Invalid - Pesan penolakan dengan alasan mengapa voucher promo tidak dapat digunakan.
+2. Kebutuhan Template Khusus untuk Masing-Masing Sub-Jenis:
+   - Template pesan tidak boleh digabung menjadi satu kategori 'confirmation' umum, karena konteks teks dan variabel placeholder-nya berbeda drastis.
+   - Keempat jenis respon tersebut harus memiliki template khusus terpisah:
+     * `confirm_summary`: Konfirmasi - Ringkasan Pesanan
+     * `confirm_promo_input`: Konfirmasi - Permintaan Input Promo
+     * `confirm_promo_valid`: Konfirmasi - Pesan Promo Valid
+     * `confirm_promo_invalid`: Konfirmasi - Pesan Promo Invalid
+3. Aturan Isolasi Ketat (Anti-Campur):
+   - Tombol 'Pilih Template' pada form Ringkasan Order HANYA memunculkan template ber-kategori `confirm_summary`.
+   - Tombol 'Pilih Template' pada form Input Promo HANYA memunculkan template ber-kategori `confirm_promo_input`.
+   - Tombol 'Pilih Template' pada form Promo Valid HANYA memunculkan template ber-kategori `confirm_promo_valid`.
+   - Tombol 'Pilih Template' pada form Promo Invalid HANYA memunculkan template ber-kategori `confirm_promo_invalid`.
+   - Di Dashboard Master Admin, admin dapat membuat, mengedit, menonaktifkan, atau menghapus template untuk masing-masing dari ke-4 sub-kategori ini secara independen.
+
+Potensi Penerapan:
+- Memperluas enum `TemplateCategory` pada `admin.types.ts` dan backend service.
+- Melakukan auto-migrasi kategori 'confirmation' lama ke 'confirm_summary' dan auto-seeding untuk 3 sub-kategori promo baru di `masterSqlite.ts`.
+- Menyesuaikan filter kategori dan dropdown formulir tambah/edit di Master Admin (`TabTemplates.tsx` & `AddEditTemplateModal.tsx`).
+- Menambahkan tombol 'Pilih Template' di 3 form promo konfirmasi lainnya pada `TabCommand.tsx`.
+
+Catatan Tambahan:
+- Wajib mematuhi larangan em-dash (-) dan en-dash (-).
+
+---
+
+[20.0] - ARSITEKTUR PERINGATAN DINI KEDALUWARSA SEWA BOT BERTAHAP DENGAN WHATSAPP NATIVE FLOW CTA_URL
+
+- Tanggal: 2026-11-09 17:54
+- Sumber: Diskusi dan Rencana Produk
+
+Informasi yang Dipelajari:
+1. Tahapan Peringatan Dini Multi-Interval (H-3, H-1, H-5 Jam, H-1 Jam):
+   - Memberitahukan tenant pemilik toko bot secara bertahap sebelum masa sewa berakhir agar bot tidak mendadak mati di tengah transaksi pembeli.
+   - 4 Interval waktu pengiriman:
+     * H-3 Hari (selisih <= 72 jam dan > 24 jam)
+     * H-1 Hari / 24 Jam (selisih <= 24 jam dan > 5 jam)
+     * H-5 Jam (selisih <= 5 jam dan > 1 jam)
+     * H-1 Jam (selisih <= 1 jam dan > 0)
+2. Mekanisme Anti-Spam Berbasis Kolom Flag Database:
+   - Kolom `warned_3d`, `warned_1d`, `warned_5h`, dan `warned_1h` bertipe integer/boolean (default 0) pada tabel `tenants` di `database/master.db`.
+   - Menjamin setiap tahapan hanya dikirim tepat 1 kali per interval sewa.
+   - Reset flag otomatis menjadi 0 saat Master Admin memperpanjang masa sewa tenant.
+3. Konstruksi Pesan Interaktif Tombol Native WhatsApp:
+   - Format pesan memuat: Nama Toko, ID Unit Bot, Waktu Tepat Kedaluwarsa, dan Status Sisa Waktu.
+   - Tombol interaktif Baileys WhatsApp bertipe `cta_url`:
+     * Label: 'Perpanjang Masa Sewa'
+     * Link URL: Direct link WhatsApp ke nomor Master Admin (`6285712439395`) dengan pesan pembuka otomatis yang memuat nama toko dan ID bot.
+   - Fallback otomatis teks biasa jika nomor penerima tidak mendukung tombol native.
+4. Engine Pengiriman & Background Scheduler:
+   - Cron service berjalan otomatis di background backend setiap 5 menit.
+   - Pesan dikirimkan melalui instance bot WhatsApp milik tenant itu sendiri ke nomor WhatsApp `owner_phone`. Jika bot tenant offline, sistem menggunakan bot master cadangan yang online.
+
+Potensi Penerapan:
+- Memodifikasi `admin-backend/database/masterSqlite.ts` untuk migrasi kolom flag peringatan.
+- Membuat service `backend/services/expiryWarningService.ts` untuk logika pengecekan, penyusunan pesan tombol, dan pengiriman.
+- Memanggil `initExpiryWarningScheduler()` saat server berjalan.
+- Menambahkan reset flag di `admin-backend/services/tenantService.ts`.
+
+Catatan Tambahan:
+- Wajib mematuhi larangan karakter em-dash (-) dan en-dash (-).
+
+---
+
+[21.0] - ARSITEKTUR SISTEM MASA SEWA FLEKSIBEL (MULTI-UNIT TIME DURATION)
+
+- Tanggal: 2026-11-09 21:14
+- Sumber: Permintaan Pengguna
+
+Informasi yang Dipelajari:
+1. Kebutuhan Masa Sewa Presisi:
+   - Admin memerlukan fleksibilitas tinggi dalam menetapkan masa aktif tenant, tidak terbatas pada satuan hari saja.
+   - Satuan waktu yang dibutuhkan: Menit, Jam, Hari, Minggu, dan Bulan.
+   - Contoh skenario: Pemberian trial 10 menit, sewa premium 1 jam 21 menit (dikonversi ke menit), atau langganan standar bulanan.
+2. Mekanisme Perhitungan di Backend:
+   - Backend akan menerima `duration_value` (angka) dan `duration_unit` ('minutes', 'hours', 'days', 'weeks', 'months').
+   - Tanggal kedaluwarsa (`expires_at`) dihitung secara dinamis dari waktu saat ini (untuk tenant baru) atau dari sisa waktu aktif (untuk perpanjangan).
+   - Logika konversi:
+     * minutes: +N menit
+     * hours: +N jam
+     * days: +N hari
+     * weeks: +N * 7 hari
+     * months: +N bulan (menggunakan objek Date untuk penanganan jumlah hari berbeda dalam bulan)
+3. Antarmuka Pengguna (UX):
+   - Menggantikan pilihan statis [30, 60, 90, 365] dengan input angka dan dropdown satuan waktu.
+   - Memberikan ringkasan keterangan (preview) tanggal kedaluwarsa sebelum admin menekan tombol simpan/daftar.
+
+Potensi Penerapan:
+- Menambahkan field `duration_value` dan `duration_unit` pada `CreateTenantInput` di `admin.types.ts`.
+- Memperbarui `TenantService.createTenant` dan `TenantService.extendDuration` untuk menangani satuan waktu tersebut.
+- Memperbarui `AddTenantModal.tsx` dan `ExtendTenantModal.tsx` dengan UI yang lebih fleksibel.
+
+Catatan Tambahan:
+- Seluruh perhitungan waktu harus menggunakan zona waktu Asia/Jakarta (WIB) agar konsisten dengan notifikasi WhatsApp.
+- Wajib mematuhi larangan karakter em-dash (-) dan en-dash (-).
+
+
+

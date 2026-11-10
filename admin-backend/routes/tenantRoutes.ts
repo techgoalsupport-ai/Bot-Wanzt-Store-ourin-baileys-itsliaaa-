@@ -17,7 +17,7 @@ tenantRouter.get('/tenants', (_req: Request, res: Response) => {
 // 2. Buat Tenant Baru
 tenantRouter.post('/tenants', (req: Request, res: Response) => {
   try {
-    const { store_name, owner_name, owner_phone, username, password, duration_days, notes } = req.body || {};
+    const { store_name, owner_name, owner_phone, username, password, duration_days, duration_value, duration_unit, notes } = req.body || {};
 
     const newTenant = TenantService.createTenant({
       store_name: store_name ? String(store_name).trim() : '',
@@ -25,7 +25,9 @@ tenantRouter.post('/tenants', (req: Request, res: Response) => {
       owner_phone: owner_phone ? String(owner_phone).trim() : '',
       username: username ? String(username).trim() : undefined,
       password: password ? String(password).trim() : undefined,
-      duration_days: parseInt(duration_days || '365', 10),
+      duration_value: duration_value !== undefined ? parseInt(duration_value, 10) : undefined,
+      duration_unit: duration_unit,
+      duration_days: duration_days ? parseInt(duration_days, 10) : undefined,
       notes: notes ? String(notes).trim() : undefined,
     });
 
@@ -43,15 +45,18 @@ tenantRouter.post('/tenants', (req: Request, res: Response) => {
 tenantRouter.post('/tenants/:id/extend', (req: Request, res: Response) => {
   try {
     const tenantId = String(req.params.id);
-    const { days, note } = req.body;
-    const daysToAdd = parseInt(days, 10);
+    const { days, amount, unit, note } = req.body;
+    
+    // Support legacy 'days' or new 'amount' + 'unit'
+    const finalAmount = parseInt(amount || days, 10);
+    const finalUnit = unit || 'days';
 
-    if (isNaN(daysToAdd) || daysToAdd <= 0) {
-      return res.status(400).json({ success: false, message: 'Jumlah hari harus berupa angka positif' });
+    if (isNaN(finalAmount) || finalAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Jumlah durasi harus berupa angka positif' });
     }
 
-    const updated = TenantService.extendDuration(tenantId, daysToAdd, note);
-    res.json({ success: true, message: `Masa sewa berhasil diperpanjang +${daysToAdd} hari`, data: updated });
+    const updated = TenantService.extendDuration(tenantId, finalAmount, finalUnit, note);
+    res.json({ success: true, message: `Masa sewa berhasil diperpanjang +${finalAmount} ${finalUnit}`, data: updated });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err?.message || 'Gagal memperpanjang sewa' });
   }

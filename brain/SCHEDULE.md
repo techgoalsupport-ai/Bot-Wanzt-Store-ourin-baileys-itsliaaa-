@@ -670,38 +670,48 @@ Super Admin dapat dengan mudah menghubungi owner toko langsung ke WhatsApp merek
 
 ---
 
-[19.0] - FITUR KATALOG TEMPLATE RESPON BOT SIAP PAKAI (TEMPLATE MESSAGE RESPON BOT)
+[19.0] - SISTEM MANAJEMEN DAN KATALOG TEMPLATE MESSAGE (DASHBOARD MASTER & RESPON BOT)
 
-- Tanggal: 2026-11-04 18:45
-- Status: Planned
+- Tanggal: 2026-11-09 14:14
+- Status: Completed
 
 Tujuan:
-Menyediakan pustaka template pesan siap pakai untuk masing-masing format respon bot (Menu, List, Carousel, Invoice, dan Konfirmasi) di dashboard toko, sehingga penyewa tidak kebingungan menyusun kata-kata dan mudah memahami cara penggunaan placeholder dinamis.
+Menerapkan sistem manajemen template message dua arah:
+1. Sisi Dashboard Master Admin: Halaman baru 'Template Message' untuk menambah, mengedit, menonaktifkan, atau menghapus template pesan respon bot secara dinamis.
+2. Sisi Dashboard Bot: Tombol 'Pilih Template' di halaman Respon Bot yang memunculkan daftar template terisolasi per-kategori fungsi (Menu hanya untuk Menu, List untuk List, Carousel untuk Carousel, Invoice untuk Invoice, Konfirmasi untuk Konfirmasi) dan otomatis mengisi textarea ketika dipilih.
 
 Rencana:
-1. Merancang daftar template siap pakai untuk setiap kategori respon di TabCommand.tsx:
-   - Template Menu: Gaya Ringkas, Gaya Ramah/Formal, Gaya Toko Game & Topup, Gaya Toko Produk Digital.
-   - Template List: Gaya Daftar Menu Kategori, Gaya Promo Spesial.
-   - Template Carousel: Gaya Kartu Produk Unggulan.
-   - Template Invoice: Gaya Rincian Lengkap Biaya, Gaya Cepat Pembayaran QRIS.
-   - Template Konfirmasi: Gaya Pengingat Ramah, Gaya Formal dengan batas waktu bayar.
-2. Menambahkan tombol "Pilih Template" di header editor masing-masing sub-tab respon bot pada TabCommand.tsx.
-3. Membangun modal/drawer galeri template interaktif:
-   - Menampilkan kartu-kartu template dengan judul, deskripsi gaya bahasa, dan pratinjau teks.
-   - Menampilkan daftar variabel placeholder yang disertakan (seperti {storeName}, {buyerNumber}, {orderId}, {totalPrice}, {paymentMethod}).
-   - Tombol "Gunakan Template Ini" yang langsung mengisi textarea editor respon bot.
-4. Menambahkan konfirmasi ramah sebelum menimpa teks jika textarea sudah berisi teks custom penyewa.
-5. Menguji pratinjau template dan responsivitas di ukuran mobile dan desktop.
+1. Tahap 1: Skema Database Pusat di `database/master.db`:
+   - Tabel `message_templates`: `id`, `name`, `category` ('menu', 'list', 'carousel', 'invoice', 'confirmation'), `content`, `is_active` (1/0), `created_at`, `updated_at`.
+   - Seeding template bawaan (default templates) untuk masing-masing kategori fungsi.
+2. Tahap 2: Backend API Service (`admin-backend` dan `backend`):
+   - Endpoint Master Admin: `GET /api/admin/templates`, `POST /api/admin/templates`, `PUT /api/admin/templates/:id`, `PATCH /api/admin/templates/:id/status`, `DELETE /api/admin/templates/:id`.
+   - Endpoint Tenant: `GET /api/bot/templates?category=<category>` (hanya mengembalikan template berstatus aktif).
+3. Tahap 3: Halaman 'Template Message' di Dashboard Master Admin (`admin-frontend`):
+   - Menambahkan menu navigasi 'Template Message' di sidebar `AdminSidebar.tsx`.
+   - Membuat halaman `TabTemplates.tsx` dengan filter kategori pill (Semua, Menu, List, Carousel, Invoice, Konfirmasi).
+   - Menampilkan tabel / kartu template dengan status aktif/nonaktif, nama, kategori, preview teks, dan tombol aksi (Edit, Toggle Status, Hapus).
+   - Modal popup 'Tambah / Edit Template' (Nama Template, Kategori Fungsi, Isi Pesan Textarea, Status).
+   - Modal konfirmasi hapus template.
+4. Tahap 4: Integrasi di Dashboard Bot Toko (`frontend`):
+   - Di `TabCommand.tsx`, menambahkan tombol 'Pilih Template' pada masing-masing sub-tab (Menu, List, Carousel, Invoice, Konfirmasi).
+   - Membuat komponen modal `TemplatePickerModal.tsx` yang secara otomatis memfilter hanya template yang kategorinya cocok dengan sub-tab yang aktif.
+   - Mengisi otomatis form respon bot saat template dipilih, dengan dialog konfirmasi jika form sudah memiliki teks.
+5. Tahap 5: Pengujian dan Verifikasi:
+   - Uji pembuatan, pengeditan, penonaktifan, dan penghapusan template di Dashboard Master Admin.
+   - Uji isolasi kategori: pastikan template menu tidak pernah muncul di sub-tab list atau invoice.
+   - Uji kompilasi (`compile_applet`) dan linting (`lint_applet`).
+   - Pencatatan di `brain/PROGRESS.md`.
 
 Hasil yang Diharapkan:
-Penyewa toko dapat langsung memilih template yang sesuai dengan karakter bisnis mereka dalam 1-klik, memahami cara kerja placeholder secara praktis, dan dapat mengkustomisasinya dengan mudah.
+Admin Utama memiliki kendali penuh atas template pesan bot, dan penyewa toko dapat dengan mudah memilih template yang sesuai dengan kategori respon bot tanpa salah kamar.
 
 ---
 
 [20.0] - FITUR PERINGATAN OTOMATIS MASA SEWA KEDALUWARSA DENGAN TOMBOL NATIVE CTA_URL (EXPIRED WARNING)
 
 - Tanggal: 2026-11-04 18:45
-- Status: Planned
+- Status: Completed
 
 Tujuan:
 Membangun sistem peringatan dini otomatis yang memberitahu owner tenant bahwa masa sewa bot akan segera berakhir, dikirimkan secara bertahap langsung ke WhatsApp pribadi owner dengan pesan interaktif menggunakan tombol native bertipe cta_url untuk perpanjangan sewa ke Master Admin.
@@ -954,3 +964,65 @@ Rencana:
 
 Hasil yang Diharapkan:
 Tenant dapat membeli token dari mitra kolaborator dan memperpanjang masa sewa bot secara mandiri 24/7 dengan mudah dan aman.
+
+---
+
+[28.0] - REFAKTORISASI DAN PENAMBAHAN 4 SUB-KATEGORI TEMPLATE PESAN PADA KONFIRMASI CHECKOUT BOT
+
+- Tanggal: 2026-11-09 15:59
+- Status: Completed
+
+Tujuan:
+Menyediakan template pesan mandiri dan terisolasi untuk 4 jenis respon bot di sub-tab Konfirmasi:
+1. Ringkasan Pesan Order (`confirm_summary`)
+2. Permintaan Input Kode Promo (`confirm_promo_input`)
+3. Pesan Jika Kode Promo Valid (`confirm_promo_valid`)
+4. Pesan Jika Kode Promo Invalid (`confirm_promo_invalid`)
+Serta menambahkan tombol 'Pilih Template' di masing-masing form tersebut dan memperbarui filter & form di Dashboard Master Admin.
+
+Rencana:
+1. Tahap 1: Pembaharuan Database & Tipe Data:
+   - Skema dan migrasi data SQLite di `masterSqlite.ts`: migrasikan 'confirmation' ke 'confirm_summary', dan seed template bawaan untuk `confirm_promo_input`, `confirm_promo_valid`, dan `confirm_promo_invalid`.
+   - Update definisi tipe `TemplateCategory` pada `admin-frontend/src/types/admin.types.ts`.
+2. Tahap 2: Pembaharuan Dashboard Master Admin (`admin-frontend`):
+   - Update filter tab dan visual badges di `TabTemplates.tsx` untuk mendukung 4 sub-kategori konfirmasi.
+   - Update dropdown kategori dan tag chips placeholder di `AddEditTemplateModal.tsx`.
+3. Tahap 3: Pembaharuan Dashboard Bot Toko (`frontend`):
+   - Pasang tombol 'Pilih Template' pada form 2 (Permintaan Input Promo), form 3 (Promo Valid), dan form 4 (Promo Invalid) di `TabCommand.tsx`.
+   - Update `TemplatePickerModal.tsx` untuk pemetaan label kategori dan tag placeholder yang tepat.
+4. Tahap 4: Verifikasi & Dokumentasi:
+   - Jalankan `compile_applet` dan `lint_applet`.
+   - Pastikan ketiadaan karakter em-dash (-) dan en-dash (-).
+   - Perbarui catatan implementasi dan progress di `brain/`.
+
+Hasil yang Diharapkan:
+Seluruh 4 bagian respon bot konfirmasi memiliki template resmi terisolasi masing-masing dan Master Admin dapat mengelolanya secara leluasa.
+
+---
+
+[29.0] - IMPLEMENTASI PENGATURAN MASA SEWA FLEKSIBEL (MENIT, JAM, HARI, MINGGU, BULAN)
+
+- Tanggal: 2026-11-09 21:15
+- Status: Completed
+
+Tujuan:
+Meningkatkan fleksibilitas penetapan masa aktif tenant di Dashboard Master Admin agar dapat diatur dalam berbagai satuan waktu (Menit, Jam, Hari, Minggu, Bulan) guna mendukung berbagai skenario penyewaan (trial singkat hingga langganan jangka panjang).
+
+Rencana:
+1. Tahap 1: Pembaharuan Skema Tipe Data & Backend:
+   - Update interface `CreateTenantInput` di `admin-backend/types/admin.types.ts`.
+   - Modifikasi `TenantService.createTenant` dan `TenantService.extendDuration` untuk mendukung parameter `amount` dan `unit`.
+   - Implementasi logika kalkulasi tanggal kedaluwarsa yang akurat untuk setiap satuan waktu.
+2. Tahap 2: Pembaharuan Dashboard Master Admin (admin-frontend):
+   - Redesain bagian pemilihan durasi pada `AddTenantModal.tsx` dan `ExtendTenantModal.tsx`.
+   - Tambahkan input angka dan dropdown satuan waktu.
+   - Tambahkan fitur pratinjau (preview) tanggal kedaluwarsa secara real-time sebelum data dikirim.
+3. Tahap 3: Verifikasi & Dokumentasi:
+   - Jalankan `compile_applet` dan `lint_applet`.
+   - Verifikasi ketepatan perhitungan waktu di database master.
+   - Catat hasil di `PROGRESS.md`.
+
+Hasil yang Diharapkan:
+Admin dapat menetapkan masa aktif tenant dengan sangat presisi (misal: 15 menit atau 1 bulan) langsung dari antarmuka Dashboard Master.
+
+

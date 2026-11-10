@@ -28,7 +28,8 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
   const [newOwnerPhone, setNewOwnerPhone] = useState<string>('');
   const [newUsername, setNewUsername] = useState<string>('');
   const [newPassword, setNewPassword] = useState<string>('');
-  const [newDuration, setNewDuration] = useState<number>(365);
+  const [durationValue, setDurationValue] = useState<number | string>(30);
+  const [durationUnit, setDurationUnit] = useState<'minutes' | 'hours' | 'days' | 'weeks' | 'months'>('days');
   const [newNotes, setNewNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [createdTenantResult, setCreatedTenantResult] = useState<CreatedTenantResult | null>(null);
@@ -36,12 +37,39 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
 
   if (!isOpen) return null;
 
+  /**
+   * Helper untuk menghitung pratinjau tanggal kedaluwarsa
+   */
+  const getExpiryPreview = () => {
+    const now = new Date();
+    const val = Math.max(0, parseInt(String(durationValue), 10) || 0);
+    const newDate = new Date(now.getTime());
+
+    switch (durationUnit) {
+      case 'minutes': newDate.setMinutes(newDate.getMinutes() + val); break;
+      case 'hours': newDate.setHours(newDate.getHours() + val); break;
+      case 'weeks': newDate.setDate(newDate.getDate() + (val * 7)); break;
+      case 'months': newDate.setMonth(newDate.getMonth() + val); break;
+      default: newDate.setDate(newDate.getDate() + val); break;
+    }
+
+    return new Intl.DateTimeFormat('id-ID', {
+      dateStyle: 'full',
+      timeStyle: 'short',
+    }).format(newDate);
+  };
+
   const handleCreateTenant = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!durationValue || parseInt(String(durationValue), 10) <= 0) {
+      showToast('Durasi wajib diisi dengan angka positif');
+      return;
+    }
     setIsSubmitting(true);
     try {
       const payload: any = {
-        duration_days: newDuration,
+        duration_value: parseInt(String(durationValue), 10),
+        duration_unit: durationUnit,
         notes: newNotes,
       };
 
@@ -75,7 +103,8 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
         setNewOwnerPhone('');
         setNewUsername('');
         setNewPassword('');
-        setNewDuration(365);
+        setDurationValue(30);
+        setDurationUnit('days');
         setNewNotes('');
 
         onSuccess();
@@ -92,6 +121,14 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
   const handleClose = () => {
     onClose();
     setCreatedTenantResult(null);
+  };
+
+  const getDurationLabel = () => {
+    if (durationUnit === 'minutes') return 'Menit';
+    if (durationUnit === 'hours') return 'Jam';
+    if (durationUnit === 'weeks') return 'Minggu';
+    if (durationUnit === 'months') return 'Bulan';
+    return 'Hari';
   };
 
   return (
@@ -141,8 +178,8 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
                   <span className="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">{createdTenantResult.password}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-500">Masa Sewa:</span>
-                  <span className="text-emerald-700 font-bold">{createdTenantResult.duration_days} Hari</span>
+                  <span className="text-slate-500">Estimasi Masa Sewa:</span>
+                  <span className="text-emerald-700 font-bold">~ {createdTenantResult.duration_days} Hari</span>
                 </div>
               </div>
             </div>
@@ -151,7 +188,7 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  const textToCopy = `Kredensial Akses Bot WhatsApp Store:\nUsername: ${createdTenantResult.username}\nPassword: ${createdTenantResult.password}\nDurasi: ${createdTenantResult.duration_days} Hari\nSilakan login dan lengkapi profil toko Anda.`;
+                  const textToCopy = `Kredensial Akses Bot WhatsApp Store:\nUsername: ${createdTenantResult.username}\nPassword: ${createdTenantResult.password}\nSilakan login dan lengkapi profil toko Anda.`;
                   navigator.clipboard.writeText(textToCopy);
                   setCopiedNewTenant(true);
                   showToast('Kredensial berhasil disalin ke clipboard!');
@@ -175,7 +212,7 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
               <button
                 type="button"
                 onClick={handleClose}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors cursor-pointer"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors cursor-pointer"
               >
                 Tutup
               </button>
@@ -288,22 +325,52 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
             )}
 
             <div>
-              <label className="block text-slate-700 mb-1.5 font-semibold">Pilih Masa Sewa Awal *</label>
-              <div className="grid grid-cols-4 gap-2">
-                {[30, 60, 90, 365].map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => setNewDuration(d)}
-                    className={`py-2 text-center rounded-xl font-bold border transition-all cursor-pointer ${
-                      newDuration === d
-                        ? 'bg-[#0084D1]/10 text-[#0084D1] border-[#0084D1] shadow-2xs'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    {d === 365 ? '1 Tahun' : `${d} Hari`}
-                  </button>
-                ))}
+              <label className="block text-slate-700 mb-1.5 font-semibold">Set Masa Sewa Awal *</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={durationValue}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') {
+                      setDurationValue('');
+                    } else {
+                      setDurationValue(parseInt(val, 10));
+                    }
+                  }}
+                  className={`flex-1 bg-slate-50 border ${!durationValue ? 'border-rose-500 ring-1 ring-rose-500/20' : 'border-slate-300'} rounded-xl px-3 py-2.5 text-slate-900 focus:bg-white focus:outline-none focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/20 font-mono font-bold text-sm`}
+                />
+                <select
+                  value={durationUnit}
+                  onChange={(e) => setDurationUnit(e.target.value as any)}
+                  className="bg-slate-100 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none focus:border-[#0084D1] font-semibold text-xs cursor-pointer"
+                >
+                  <option value="minutes">Menit</option>
+                  <option value="hours">Jam</option>
+                  <option value="days">Hari</option>
+                  <option value="weeks">Minggu</option>
+                  <option value="months">Bulan</option>
+                </select>
+              </div>
+              
+              {!durationValue && (
+                <div className="mt-1.5 flex items-center gap-1.5 text-rose-500 font-bold text-[10px] animate-pulse">
+                  <div className="w-1 h-1 rounded-full bg-rose-500" />
+                  <span>Form Tersebut Wajib Di Isi, Misal : 1</span>
+                </div>
+              )}
+              
+              {/* Expiry Preview */}
+              <div className="mt-2 p-2.5 rounded-lg bg-emerald-50/50 border border-emerald-100 flex items-start gap-2">
+                <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 mt-0.5">
+                  <Check className="w-2.5 h-2.5 text-white" />
+                </div>
+                <div className="text-[10px] text-emerald-800 leading-tight">
+                  <p className="font-bold">Akan berakhir pada:</p>
+                  <p className="font-mono mt-0.5">{getExpiryPreview()} WIB</p>
+                </div>
               </div>
             </div>
 

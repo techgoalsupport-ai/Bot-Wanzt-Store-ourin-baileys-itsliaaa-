@@ -57,9 +57,30 @@ export function initMasterDatabase(): Database.Database {
       max_groups INTEGER DEFAULT 10,
       created_at TEXT NOT NULL,
       expires_at TEXT NOT NULL,
-      notes TEXT
+      notes TEXT,
+      warned_3d INTEGER NOT NULL DEFAULT 0,
+      warned_1d INTEGER NOT NULL DEFAULT 0,
+      warned_5h INTEGER NOT NULL DEFAULT 0,
+      warned_1h INTEGER NOT NULL DEFAULT 0
     );
   `);
+
+  // Migrasi kolom flag peringatan sewa pada tabel tenants jika belum ada
+  const tenantColumns = masterDb.prepare("PRAGMA table_info(tenants)").all() as { name: string }[];
+  const colNames = new Set(tenantColumns.map((c) => c.name));
+
+  if (!colNames.has('warned_3d')) {
+    masterDb.exec("ALTER TABLE tenants ADD COLUMN warned_3d INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!colNames.has('warned_1d')) {
+    masterDb.exec("ALTER TABLE tenants ADD COLUMN warned_1d INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!colNames.has('warned_5h')) {
+    masterDb.exec("ALTER TABLE tenants ADD COLUMN warned_5h INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!colNames.has('warned_1h')) {
+    masterDb.exec("ALTER TABLE tenants ADD COLUMN warned_1h INTEGER NOT NULL DEFAULT 0");
+  }
 
   // Tabel Riwayat Perpanjangan Sewa
   masterDb.exec(`
@@ -109,6 +130,146 @@ export function initMasterDatabase(): Database.Database {
       'Unit Utama Wanzt Store (Apartemen Penthouse)'
     );
     console.log('[Master DB] Tenant default "t_wanzt" berhasil diinisialisasi.');
+  }
+
+  // Tabel Template Message
+  masterDb.exec(`
+    CREATE TABLE IF NOT EXISTS message_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL,
+      content TEXT NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+
+  // Seed default templates jika kosong
+  const templateCount = (masterDb.prepare('SELECT COUNT(*) as count FROM message_templates').get() as { count: number }).count;
+  if (templateCount === 0) {
+    const now = new Date().toISOString();
+    const insertTemplate = masterDb.prepare(`
+      INSERT INTO message_templates (name, category, content, is_active, created_at, updated_at)
+      VALUES (?, ?, ?, 1, ?, ?)
+    `);
+
+    // 1. Template Menu
+    insertTemplate.run(
+      'Menu Utama Ramah & Ringkas',
+      'menu',
+      'Halo kak {buyerNumber}! 👋\nSelamat datang di *{storeName}*.\n\nBerikut adalah menu utama layanan kami. Silakan pilih produk atau layanan yang Anda inginkan melalui tombol interaktif di bawah.\n\nButuh bantuan? CS kami siap melayani di {ownerNumber}.',
+      now,
+      now
+    );
+
+    // 2. Template List
+    insertTemplate.run(
+      'Katalog Kategori Produk',
+      'list',
+      '📋 *KATALOG PRODUK & LAYANAN - {storeName}*\n\nSilakan pilih salah satu kategori produk yang Anda inginkan pada daftar list berikut.\nSeluruh proses transaksi diproses cepat dan otomatis 24/7.',
+      now,
+      now
+    );
+
+    // 3. Template Carousel
+    insertTemplate.run(
+      'Kartu Produk Unggulan & Order Instan',
+      'carousel',
+      '⭐ *PRODUK TERBAIK - {storeName}*\n\nGeser ke samping untuk melihat varian dan harga produk.\nKlik tombol *Order* pada kartu produk pilihan Anda untuk langsung mendapatkan invoice QRIS otomatis!',
+      now,
+      now
+    );
+
+    // 4. Template Invoice
+    insertTemplate.run(
+      'Invoice QRIS Rincian Lengkap',
+      'invoice',
+      '🧾 *INVOICE PEMBAYARAN - {storeName}*\n----------------------------------------\nNomor Pesanan: #{orderId}\nNomor Pembeli: {buyerNumber}\nMetode Bayar: {paymentMethod}\n\n*Rincian Pesanan:*\n{detailItems}\n\n*TOTAL BAYAR: Rp {totalPrice}*\nBatas Waktu: {paymentExpiry}\n----------------------------------------\nSilakan scan kode QRIS di atas untuk menyelesaikan pesanan Anda. Sistem otomatis memproses pesanan setelah pembayaran terverifikasi!',
+      now,
+      now
+    );
+
+    // 5. Template Konfirmasi: Ringkasan Pesanan
+    insertTemplate.run(
+      'Ringkasan Pesanan Interaktif',
+      'confirm_summary',
+      '🛒 *RINCIAN PESANAN*\nHalo kak, silakan konfirmasi pesanan Anda:\n\n• *Produk:* {produkName}\n• *Varian:* {varian}\n• *Harga Normal:* Rp {price}\n\nPunya kode promo? Silakan pilih tombol di bawah untuk menggunakan diskon atau langsung bayar.',
+      now,
+      now
+    );
+
+    // 6. Template Konfirmasi: Permintaan Input Promo
+    insertTemplate.run(
+      'Instruksi Input Kupon Promo',
+      'confirm_promo_input',
+      '🎟️ *MASUKKAN KODE PROMO*\nSilakan ketik kode promo Anda (contoh: HEMAT10) atau ketik *BATAL* untuk melanjutkan dengan harga normal.\n\n⏱️ _Batas waktu: 90 detik._',
+      now,
+      now
+    );
+
+    // 7. Template Konfirmasi: Pesan Promo Valid
+    insertTemplate.run(
+      'Pemberitahuan Promo Berhasil Diterapkan',
+      'confirm_promo_valid',
+      '🎉 *KODE PROMO BERHASIL DIGUNAKAN!*\n• *Kode Promo:* {promoCode}\n• *Harga Awal:* Rp {price}\n• *Potongan Diskon:* -Rp {discount}\n• *Total Bayar:* Rp {finalPrice}\n\nInvoice pembayaran QRIS sedang diterbitkan...',
+      now,
+      now
+    );
+
+    // 8. Template Konfirmasi: Pesan Promo Invalid
+    insertTemplate.run(
+      'Pemberitahuan Kode Promo Tidak Valid',
+      'confirm_promo_invalid',
+      '⚠️ *KODE PROMO TIDAK DAPAT DIGUNAKAN*\nKode promo *{promoCode}* tidak dapat diterapkan.\nPenyebab: *{reason}*\n\nSilakan ketik kode promo lain, atau ketik *BATAL* untuk lanjut bayar harga normal (Rp {price}).',
+      now,
+      now
+    );
+
+    console.log('[Master DB] 8 template pesan default berhasil diinisialisasi.');
+  } else {
+    // Migrasi data lama dari 'confirmation' menjadi 'confirm_summary'
+    masterDb.prepare("UPDATE message_templates SET category = 'confirm_summary' WHERE category = 'confirmation'").run();
+
+    // Pastikan 3 sub-kategori promo terisi jika belum ada
+    const now = new Date().toISOString();
+    const insertTemplate = masterDb.prepare(`
+      INSERT INTO message_templates (name, category, content, is_active, created_at, updated_at)
+      VALUES (?, ?, ?, 1, ?, ?)
+    `);
+
+    const hasPromoInput = (masterDb.prepare("SELECT COUNT(*) as count FROM message_templates WHERE category = 'confirm_promo_input'").get() as { count: number }).count;
+    if (hasPromoInput === 0) {
+      insertTemplate.run(
+        'Instruksi Input Kupon Promo',
+        'confirm_promo_input',
+        '🎟️ *MASUKKAN KODE PROMO*\nSilakan ketik kode promo Anda (contoh: HEMAT10) atau ketik *BATAL* untuk melanjutkan dengan harga normal.\n\n⏱️ _Batas waktu: 90 detik._',
+        now,
+        now
+      );
+    }
+
+    const hasPromoValid = (masterDb.prepare("SELECT COUNT(*) as count FROM message_templates WHERE category = 'confirm_promo_valid'").get() as { count: number }).count;
+    if (hasPromoValid === 0) {
+      insertTemplate.run(
+        'Pemberitahuan Promo Berhasil Diterapkan',
+        'confirm_promo_valid',
+        '🎉 *KODE PROMO BERHASIL DIGUNAKAN!*\n• *Kode Promo:* {promoCode}\n• *Harga Awal:* Rp {price}\n• *Potongan Diskon:* -Rp {discount}\n• *Total Bayar:* Rp {finalPrice}\n\nInvoice pembayaran QRIS sedang diterbitkan...',
+        now,
+        now
+      );
+    }
+
+    const hasPromoInvalid = (masterDb.prepare("SELECT COUNT(*) as count FROM message_templates WHERE category = 'confirm_promo_invalid'").get() as { count: number }).count;
+    if (hasPromoInvalid === 0) {
+      insertTemplate.run(
+        'Pemberitahuan Kode Promo Tidak Valid',
+        'confirm_promo_invalid',
+        '⚠️ *KODE PROMO TIDAK DAPAT DIGUNAKAN*\nKode promo *{promoCode}* tidak dapat diterapkan.\nPenyebab: *{reason}*\n\nSilakan ketik kode promo lain, atau ketik *BATAL* untuk lanjut bayar harga normal (Rp {price}).',
+        now,
+        now
+      );
+    }
   }
 
   return masterDb;

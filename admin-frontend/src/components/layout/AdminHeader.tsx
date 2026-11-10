@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Store, ExternalLink, RefreshCw, Building2, BarChart3, Radio, ShieldCheck } from 'lucide-react';
+import { Menu, Store, ExternalLink, RefreshCw, Building2, BarChart3, Radio, ShieldCheck, LayoutTemplate } from 'lucide-react';
 import { AdminNavTab } from './AdminSidebar.tsx';
 
 interface AdminHeaderProps {
@@ -22,6 +22,12 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           title: 'Daftar Unit Bot',
           subtitle: 'Pusat Manajemen Multi-Tenant Apartemen Bot WhatsApp',
           icon: Building2,
+        };
+      case 'templates':
+        return {
+          title: 'Template Message',
+          subtitle: 'Katalog template respon pesan bot resmi untuk seluruh toko',
+          icon: LayoutTemplate,
         };
       case 'stats':
         return {

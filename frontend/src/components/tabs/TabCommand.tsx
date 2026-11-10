@@ -17,8 +17,10 @@ import {
   BellOff,
   ChevronDown,
   Upload,
+  LayoutTemplate,
 } from 'lucide-react';
 import { WhatsAppButton, StoreInfoConfig } from '../../types/dashboard.types';
+import { TemplatePickerModal, BotCommandCategory } from '../modals/TemplatePickerModal';
 
 interface MediaGalleryPickerProps {
   label: string;
@@ -396,6 +398,36 @@ export const TabCommand: React.FC<TabCommandProps> = ({
     showToast(toastMsg || `Tag ${tag} disisipkan`);
   };
 
+  // State Template Picker Modal
+  const [pickerState, setPickerState] = React.useState<{
+    isOpen: boolean;
+    category: BotCommandCategory;
+    categoryLabel: string;
+    currentContent: string;
+    onSelect: (content: string) => void;
+  }>({
+    isOpen: false,
+    category: 'menu',
+    categoryLabel: 'Menu',
+    currentContent: '',
+    onSelect: () => {},
+  });
+
+  const openTemplatePicker = (
+    category: BotCommandCategory,
+    categoryLabel: string,
+    currentContent: string,
+    onSelect: (content: string) => void
+  ) => {
+    setPickerState({
+      isOpen: true,
+      category,
+      categoryLabel,
+      currentContent,
+      onSelect,
+    });
+  };
+
   const getButtonTypeBadge = (btn: WhatsAppButton) => {
     switch (btn.type) {
       case 'cta_url':
@@ -480,7 +512,18 @@ export const TabCommand: React.FC<TabCommandProps> = ({
                 <label className="text-xs font-semibold text-slate-800">
                   Teks Pesan Menu
                 </label>
-                <span className="text-[11px] font-mono text-slate-400">Prefix: / . ! #</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('menu', 'Command Menu', menuOutputText, setMenuOutputText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                    title="Pilih Template Resmi untuk Command Menu"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <span className="text-[11px] font-mono text-slate-400">Prefix: / . ! #</span>
+                </div>
               </div>
 
               {/* Tag Chips */}
@@ -670,7 +713,18 @@ export const TabCommand: React.FC<TabCommandProps> = ({
                 <label className="text-xs font-semibold text-slate-800">
                   Teks Pesan List Katalog
                 </label>
-                <span className="text-[11px] font-mono text-slate-400">Prefix: / . ! #</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('list', 'Command List', listOutputText, setListOutputText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                    title="Pilih Template Resmi untuk Command List"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <span className="text-[11px] font-mono text-slate-400">Prefix: / . ! #</span>
+                </div>
               </div>
 
               {/* Tag Chips */}
@@ -770,17 +824,28 @@ export const TabCommand: React.FC<TabCommandProps> = ({
                 <label className="text-xs font-semibold text-slate-800">
                   Template Teks Kartu
                 </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const defaultVal = `*{storeName}*\n\n*{produkName} | {category}*\n\n*Detail Produk:*\n- Varian: {varian}\n- Harga: {price}\n- Stok: {stock} tersedia\n\nSilakan pilih tindakan di bawah ini untuk melanjutkan.`;
-                    setCarouselOutputText(defaultVal);
-                    showToast('Template direset ke default');
-                  }}
-                  className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
-                >
-                  Reset Default
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('carousel', 'Command Carousel', carouselOutputText, setCarouselOutputText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                    title="Pilih Template Resmi untuk Command Carousel"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const defaultVal = `*{storeName}*\n\n*{produkName} | {category}*\n\n*Detail Produk:*\n- Varian: {varian}\n- Harga: {price}\n- Stok: {stock} tersedia\n\nSilakan pilih tindakan di bawah ini untuk melanjutkan.`;
+                      setCarouselOutputText(defaultVal);
+                      showToast('Template direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
               </div>
 
               {/* Tag Chips */}
@@ -876,17 +941,28 @@ export const TabCommand: React.FC<TabCommandProps> = ({
                 <label className="text-xs font-semibold text-slate-800">
                   Template Teks Tagihan Invoice
                 </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const defaultVal = `*INVOICE PEMBAYARAN*\n*{storeName}*\n\nProduk: {produkName}\nVarian: {varian}\nOrder ID: \`{orderId}\`\n\nHarga: Rp {price}\nFee: +Rp {unikCode}\n*TOTAL BAYAR: Rp {total}*\n\nTransfer tepat *Rp {total}* hingga digit terakhir agar otomatis terverifikasi.\nBatas Waktu: 15 Menit.`;
-                    setInvoiceOutputText(defaultVal);
-                    showToast('Template invoice direset ke default');
-                  }}
-                  className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
-                >
-                  Reset Default
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('invoice', 'Invoice Pembayaran', invoiceOutputText, setInvoiceOutputText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                    title="Pilih Template Resmi untuk Invoice Pembayaran"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const defaultVal = `*INVOICE PEMBAYARAN*\n*{storeName}*\n\nProduk: {produkName}\nVarian: {varian}\nOrder ID: \`{orderId}\`\n\nHarga: Rp {price}\nFee: +Rp {unikCode}\n*TOTAL BAYAR: Rp {total}*\n\nTransfer tepat *Rp {total}* hingga digit terakhir agar otomatis terverifikasi.\nBatas Waktu: 15 Menit.`;
+                      setInvoiceOutputText(defaultVal);
+                      showToast('Template invoice direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
               </div>
 
               {/* Tag Chips */}
@@ -1006,17 +1082,28 @@ export const TabCommand: React.FC<TabCommandProps> = ({
                   </label>
                   <p className="text-[11px] text-slate-500">Pesan awal di DM saat pembeli klik tombol Order di Carousel.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const defaultVal = `🛒 *RINCIAN PESANAN*\nHalo kak, silakan konfirmasi pesanan Anda:\n\n• *Produk:* {produkName}\n• *Varian:* {varian}\n• *Harga Normal:* Rp {price}\n\nPunya kode promo? Silakan pilih tombol di bawah untuk menggunakan diskon atau langsung bayar.`;
-                    setConfirmSummaryText(defaultVal);
-                    showToast('Ringkasan pesanan direset ke default');
-                  }}
-                  className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
-                >
-                  Reset Default
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('confirm_summary', 'Ringkasan Pesanan', confirmSummaryText, setConfirmSummaryText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                    title="Pilih Template Resmi untuk Konfirmasi Ringkasan Pesanan"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const defaultVal = `🛒 *RINCIAN PESANAN*\nHalo kak, silakan konfirmasi pesanan Anda:\n\n• *Produk:* {produkName}\n• *Varian:* {varian}\n• *Harga Normal:* Rp {price}\n\nPunya kode promo? Silakan pilih tombol di bawah untuk menggunakan diskon atau langsung bayar.`;
+                      setConfirmSummaryText(defaultVal);
+                      showToast('Ringkasan pesanan direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
               </div>
 
               {/* Tag Chips */}
@@ -1052,17 +1139,28 @@ export const TabCommand: React.FC<TabCommandProps> = ({
                   </label>
                   <p className="text-[11px] text-slate-500">Pesan instruksi saat pembeli menekan tombol Pakai Kode Promo (waktu tunggu 90 detik).</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const defaultVal = `🎟️ *MASUKKAN KODE PROMO*\nSilakan ketik kode promo Anda (contoh: HEMAT10) atau ketik *BATAL* untuk melanjutkan dengan harga normal.\n\n⏱️ _Batas waktu: 90 detik._`;
-                    setConfirmInputPromoText(defaultVal);
-                    showToast('Instruksi promo direset ke default');
-                  }}
-                  className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
-                >
-                  Reset Default
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('confirm_promo_input', 'Input Kode Promo', confirmInputPromoText, setConfirmInputPromoText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                    title="Pilih Template Resmi untuk Permintaan Input Promo"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const defaultVal = `🎟️ *MASUKKAN KODE PROMO*\nSilakan ketik kode promo Anda (contoh: HEMAT10) atau ketik *BATAL* untuk melanjutkan dengan harga normal.\n\n⏱️ _Batas waktu: 90 detik._`;
+                      setConfirmInputPromoText(defaultVal);
+                      showToast('Instruksi promo direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5 py-1">
@@ -1097,17 +1195,28 @@ export const TabCommand: React.FC<TabCommandProps> = ({
                   </label>
                   <p className="text-[11px] text-slate-500">Pesan sukses potongan diskon sebelum invoice QRIS otomatis diterbitkan.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const defaultVal = `🎉 *KODE PROMO BERHASIL DIGUNAKAN!*\n• *Kode Promo:* {promoCode}\n• *Harga Awal:* Rp {price}\n• *Potongan Diskon:* -Rp {discount}\n• *Total Bayar:* Rp {finalPrice}\n\nInvoice pembayaran QRIS sedang diterbitkan...`;
-                    setConfirmPromoSuccessText(defaultVal);
-                    showToast('Template promo valid direset ke default');
-                  }}
-                  className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
-                >
-                  Reset Default
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('confirm_promo_valid', 'Pesan Promo Valid', confirmPromoSuccessText, setConfirmPromoSuccessText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                    title="Pilih Template Resmi untuk Pesan Promo Valid"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const defaultVal = `🎉 *KODE PROMO BERHASIL DIGUNAKAN!*\n• *Kode Promo:* {promoCode}\n• *Harga Awal:* Rp {price}\n• *Potongan Diskon:* -Rp {discount}\n• *Total Bayar:* Rp {finalPrice}\n\nInvoice pembayaran QRIS sedang diterbitkan...`;
+                      setConfirmPromoSuccessText(defaultVal);
+                      showToast('Template promo valid direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
               </div>
 
               {/* Tag Chips */}
@@ -1154,17 +1263,28 @@ export const TabCommand: React.FC<TabCommandProps> = ({
                   </label>
                   <p className="text-[11px] text-slate-500">Pesan penolakan jika kode expired, habis kuota, salah ketik, atau tidak memenuhi syarat.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const defaultVal = `⚠️ *KODE PROMO TIDAK DAPAT DIGUNAKAN*\nKode promo *{promoCode}* tidak dapat diterapkan.\nPenyebab: *{reason}*\n\nSilakan ketik kode promo lain, atau ketik *BATAL* untuk lanjut bayar harga normal (Rp {price}).`;
-                    setConfirmPromoInvalidText(defaultVal);
-                    showToast('Template promo invalid direset ke default');
-                  }}
-                  className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
-                >
-                  Reset Default
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('confirm_promo_invalid', 'Pesan Promo Invalid', confirmPromoInvalidText, setConfirmPromoInvalidText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                    title="Pilih Template Resmi untuk Pesan Promo Invalid"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const defaultVal = `⚠️ *KODE PROMO TIDAK DAPAT DIGUNAKAN*\nKode promo *{promoCode}* tidak dapat diterapkan.\nPenyebab: *{reason}*\n\nSilakan ketik kode promo lain, atau ketik *BATAL* untuk lanjut bayar harga normal (Rp {price}).`;
+                      setConfirmPromoInvalidText(defaultVal);
+                      showToast('Template promo invalid direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
               </div>
 
               {/* Tag Chips */}
@@ -1250,6 +1370,17 @@ export const TabCommand: React.FC<TabCommandProps> = ({
           </div>
         </div>
       )}
+
+      {/* Template Picker Modal */}
+      <TemplatePickerModal
+        isOpen={pickerState.isOpen}
+        onClose={() => setPickerState((prev) => ({ ...prev, isOpen: false }))}
+        category={pickerState.category}
+        categoryLabel={pickerState.categoryLabel}
+        currentContent={pickerState.currentContent}
+        onSelectTemplate={pickerState.onSelect}
+        showToast={showToast}
+      />
     </div>
   );
 };

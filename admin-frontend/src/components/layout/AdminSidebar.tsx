@@ -11,9 +11,10 @@ import {
   X,
   ExternalLink,
   RefreshCw,
+  LayoutTemplate,
 } from 'lucide-react';
 
-export type AdminNavTab = 'units' | 'stats' | 'broadcast' | 'settings';
+export type AdminNavTab = 'units' | 'templates' | 'stats' | 'broadcast' | 'settings';
 
 interface AdminSidebarProps {
   selectedTab: AdminNavTab;
@@ -56,6 +57,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       icon: Building2,
       badge: totalTenants > 0 ? totalTenants : undefined,
       description: 'Manajemen unit penyewa',
+    },
+    {
+      id: 'templates',
+      label: 'Template Message',
+      icon: LayoutTemplate,
+      description: 'Kelola template pesan bot',
     },
     {
       id: 'stats',

@@ -11,6 +11,10 @@ export interface Tenant {
   created_at: string;
   expires_at: string;
   notes: string | null;
+  warned_3d?: number;
+  warned_1d?: number;
+  warned_5h?: number;
+  warned_1h?: number;
   days_remaining?: number;
   duration_days?: number;
   bot_status?: 'online' | 'offline';
@@ -35,4 +39,34 @@ export interface CreatedTenantResult {
 export interface ResetPasswordResult {
   username: string;
   new_password: string;
+}
+
+export type TemplateCategory =
+  | 'menu'
+  | 'list'
+  | 'carousel'
+  | 'invoice'
+  | 'confirm_summary'
+  | 'confirm_promo_input'
+  | 'confirm_promo_valid'
+  | 'confirm_promo_invalid'
+  | 'confirmation';
+
+export interface MessageTemplate {
+  id: number;
+  name: string;
+  category: TemplateCategory;
+  content: string;
+  is_active: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type DurationUnit = 'minutes' | 'hours' | 'days' | 'weeks' | 'months';
+
+export interface CreateTemplateInput {
+  name: string;
+  category: TemplateCategory;
+  content: string;
+  is_active?: boolean | number;
 }

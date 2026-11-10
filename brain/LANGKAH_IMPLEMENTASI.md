@@ -1885,6 +1885,357 @@ Rencana Pengujian:
 Hasil yang Diharapkan:
 Tombol Dashboard Master berhasil dihapus dari DesktopTopNav, Navbar, dan SuspendedAccountModal, serta terpasang rapi di LoginPage.
 
+---
+
+[44.0] - IMPLEMENTASI SISTEM MANAJEMEN DAN KATALOG TEMPLATE MESSAGE (DASHBOARD MASTER & RESPON BOT)
+
+- Tanggal: 2026-11-09 14:18
+- Status: Completed
+Referensi SCHEDULE: 19.0
+
+Tujuan Implementasi:
+1. Membangun sistem pengelolaan Template Message terpusat di Dashboard Master Admin (admin-frontend):
+   - Menambahkan menu navigasi baru 'Template Message' pada sidebar Master Admin.
+   - Membuat halaman manajemen template dengan filter kategori (Menu, List, Carousel, Invoice, Konfirmasi).
+   - Fitur CRUD lengkap: Tambah Template Baru (modal popup form), Edit Template, Toggle Aktif/Nonaktif, dan Hapus Template.
+2. Membangun integrasi pemilih template di Dashboard Bot Toko (frontend):
+   - Menambahkan tombol 'Pilih Template' di setiap sub-tab halaman Respon Bot (TabCommand.tsx).
+   - Menjamin pemisahan ketat antar-kategori (anti-campur): Menu hanya melihat template menu, List hanya template list, Carousel hanya template carousel, Invoice hanya template invoice, dan Konfirmasi hanya template konfirmasi.
+   - Mengisi otomatis form respon bot saat template dipilih dengan konfirmasi penimpaan teks.
+3. Menyediakan database SQLite master terpusat (`message_templates`) dan API RESTful di backend.
+
+Bagian yang Akan Diubah/Dibuat:
+- Backend:
+  * "admin-backend/database/masterSqlite.ts" - Skema tabel message_templates dan auto-seed template awal.
+  * "admin-backend/services/templateService.ts" (Baru) - Layanan CRUD dan query template.
+  * "admin-backend/routes/templateRoutes.ts" (Baru) - Router API Express Master Admin.
+  * "admin-backend/routes/adminRoutes.ts" - Agregasi route /templates.
+  * "backend/routes/tenantTemplateRoutes.ts" (Baru) - Router API publik tenant /api/bot/templates.
+  * "backend/app.ts" - Pendaftaran route /api/bot/templates.
+- admin-frontend:
+  * "admin-frontend/src/types/admin.types.ts" - Tipe data MessageTemplate & CreateTemplateInput.
+  * "admin-frontend/src/components/layout/AdminSidebar.tsx" - Navigasi tab 'templates' berikon LayoutTemplate.
+  * "admin-frontend/src/components/dashboard/tabs/TabTemplates.tsx" (Baru) - Halaman utama manajemen template.
+  * "admin-frontend/src/components/modals/AddEditTemplateModal.tsx" (Baru) - Modal form tambah & edit template.
+  * "admin-frontend/src/components/modals/DeleteTemplateModal.tsx" (Baru) - Modal konfirmasi hapus template.
+  * "admin-frontend/src/App.tsx" - Pengalihan tab 'templates' dan orkestrasi modal.
+- frontend:
+  * "frontend/src/components/modals/TemplatePickerModal.tsx" (Baru) - Modal katalog pemilih template terisolasi.
+  * "frontend/src/components/tabs/TabCommand.tsx" - Pemasangan tombol 'Pilih Template' di 5 sub-tab respon bot.
+
+Alasan Perubahan:
+Memenuhi instruksi pengguna untuk memberikan kebebasan bagi Master Admin dalam mengelola template pesan respon bot secara dinamis dari satu pintu, serta mempermudah penyewa toko memilih format pesan yang tepat dan rapi tanpa risiko salah kategori.
+
+Strategi Implementasi:
+1. Inisialisasi skema tabel `message_templates` di `masterSqlite.ts` lengkap dengan 5 template default awal.
+2. Buat service dan route backend untuk Master Admin (`/api/admin/templates`) dan Tenant (`/api/bot/templates`).
+3. Kembangkan antarmuka Master Admin di `admin-frontend`: sidebar tab, `TabTemplates.tsx`, modal tambah/edit, dan modal hapus.
+4. Kembangkan antarmuka bot di `frontend`: modal pemilih template `TemplatePickerModal.tsx` dan kaitkan ke `TabCommand.tsx`.
+5. Jalankan verifikasi linting (`lint_applet`) dan kompilasi (`compile_applet`).
+6. Verifikasi ketiadaan karakter em-dash (—).
+7. Catat penyelesaian di `brain/PROGRESS.md`.
+
+Urutan Pengerjaan:
+1. Update `admin-backend/database/masterSqlite.ts`.
+2. Buat `admin-backend/services/templateService.ts`.
+3. Buat `admin-backend/routes/templateRoutes.ts` dan hubungkan di `adminRoutes.ts`.
+4. Buat `backend/routes/tenantTemplateRoutes.ts` dan hubungkan di `backend/app.ts`.
+5. Update `admin-frontend/src/types/admin.types.ts`.
+6. Update `admin-frontend/src/components/layout/AdminSidebar.tsx`.
+7. Buat `admin-frontend/src/components/modals/AddEditTemplateModal.tsx` dan `DeleteTemplateModal.tsx`.
+8. Buat `admin-frontend/src/components/dashboard/tabs/TabTemplates.tsx`.
+9. Update `admin-frontend/src/App.tsx`.
+10. Buat `frontend/src/components/modals/TemplatePickerModal.tsx`.
+11. Update `frontend/src/components/tabs/TabCommand.tsx`.
+12. Uji kompilasi, linting, dan cek em-dash.
+13. Perbarui dokumentasi di `brain/PROGRESS.md`, `brain/LANGKAH_IMPLEMENTASI.md`, dan `brain/SCHEDULE.md`.
+
+Dampak Perubahan:
+Master Admin dapat mengontrol secara terpusat seluruh template pesan yang beredar di platform bot, dan tenant dapat memilih template berkualitas tinggi hanya dengan satu klik.
+
+Rencana Pengujian:
+1. Test GET /api/admin/templates dan GET /api/bot/templates?category=menu.
+2. Test tambah, edit, toggle aktif/nonaktif, dan hapus template dari dashboard master.
+3. Test klik tombol 'Pilih Template' di sub-tab Menu, pastikan hanya template berkategori menu yang tampil.
+4. Test pemilihan template, pastikan textarea otomatis terisi teks template.
+5. Verifikasi 100% lulus build dan linting.
+
+Hasil yang Diharapkan:
+Sistem Template Message beroperasi penuh di kedua sisi (Dashboard Master dan Dashboard Bot) dengan pemisahan kategori yang ketat dan desain yang serasi.
+
+---
+
+[45.0] - IMPLEMENTASI 4 SUB-KATEGORI TEMPLATE PESAN KHUSUS UNTUK KONFIRMASI CHECKOUT BOT
+
+- Tanggal: 2026-11-09 16:00
+- Status: Completed
+Referensi SCHEDULE: 28.0
+
+Tujuan Implementasi:
+1. Menyediakan 4 kategori template mandiri untuk alur Konfirmasi Checkout:
+   - `confirm_summary`: Ringkasan Pesan Order (Order Summary).
+   - `confirm_promo_input`: Permintaan Input Kode Promo.
+   - `confirm_promo_valid`: Pesan Jika Kode Promo Valid.
+   - `confirm_promo_invalid`: Pesan Jika Kode Promo Tidak Valid.
+2. Memperbarui Master Database:
+   - Migrasi kategori 'confirmation' lama menjadi 'confirm_summary'.
+   - Auto-seeding template default untuk `confirm_promo_input`, `confirm_promo_valid`, dan `confirm_promo_invalid`.
+3. Memperbarui Master Admin (`admin-frontend`):
+   - Tambahkan filter kategori dan label visual untuk 4 sub-kategori konfirmasi di `TabTemplates.tsx`.
+   - Perbarui dropdown kategori dan tag chips placeholder relevan di `AddEditTemplateModal.tsx`.
+4. Memperbarui Dashboard Bot (`frontend`):
+   - Tambahkan tombol 'Pilih Template' di form Input Promo, form Promo Valid, dan form Promo Invalid pada `TabCommand.tsx`.
+   - Update `TemplatePickerModal.tsx` untuk menampilkan nama kategori dan preview yang sesuai.
+
+Bagian yang Akan Diubah:
+- "admin-backend/database/masterSqlite.ts" - Migrasi data lama dan seeding 3 template konfirmasi baru.
+- "admin-frontend/src/types/admin.types.ts" - Memperluas union type `TemplateCategory`.
+- "admin-frontend/src/components/dashboard/tabs/TabTemplates.tsx" - Filter kategori dan badge warna.
+- "admin-frontend/src/components/modals/AddEditTemplateModal.tsx" - Dropdown fungsi dan tag placeholder dinamis.
+- "frontend/src/components/tabs/TabCommand.tsx" - Tombol 'Pilih Template' pada 4 form konfirmasi.
+- "frontend/src/components/modals/TemplatePickerModal.tsx" - Penyesuaian nama kategori.
+
+Alasan Perubahan:
+Menjawab koreksi dari pengguna bahwa bagian konfirmasi memiliki 4 alur terpisah yang masing-masing membutuhkan template mandiri dan tidak boleh disatukan hanya pada Ringkasan Pesan Order.
+
+Strategi Implementasi:
+1. Update skema & default seed di `admin-backend/database/masterSqlite.ts`.
+2. Update tipe data `TemplateCategory` di `admin.types.ts`.
+3. Update `TabTemplates.tsx` dan `AddEditTemplateModal.tsx`.
+4. Update `TabCommand.tsx` dan `TemplatePickerModal.tsx`.
+5. Uji coba dengan `compile_applet` dan `lint_applet`.
+6. Cek ketiadaan em-dash (-) dan en-dash (-).
+7. Catat penyelesaian di `PROGRESS.md`.
+
+Urutan Pengerjaan:
+1. Modifikasi `admin-backend/database/masterSqlite.ts`.
+2. Modifikasi `admin-frontend/src/types/admin.types.ts`.
+3. Modifikasi `admin-frontend/src/components/modals/AddEditTemplateModal.tsx`.
+4. Modifikasi `admin-frontend/src/components/dashboard/tabs/TabTemplates.tsx`.
+5. Modifikasi `frontend/src/components/modals/TemplatePickerModal.tsx`.
+6. Modifikasi `frontend/src/components/tabs/TabCommand.tsx`.
+7. Jalankan kompilasi dan linting.
+8. Perbarui dokumentasi di `brain/`.
+
+Dampak Perubahan:
+Pengguna dapat memilih template spesifik untuk setiap jenis respon konfirmasi promo dan ringkasan pesanan secara presisi tanpa ada template yang tertukar atau salah konteks.
+
+Rencana Pengujian:
+1. Verifikasi template di Master Admin tampil dengan filter kategori yang lengkap.
+2. Verifikasi tombol 'Pilih Template' di setiap form konfirmasi bot hanya memuat template yang relevan dengan form tersebut.
+3. Verifikasi teks otomatis terisi ke form saat template dipilih.
+4. Verifikasi `tsc --noEmit` lolos 100%.
+
+Hasil yang Diharapkan:
+Seluruh 4 formulir respon konfirmasi bot memiliki template terpisah dan dapat dikelola secara menyeluruh dari Dashboard Master Admin.
+
+---
+
+[46.0] - IMPLEMENTASI FITUR PERINGATAN OTOMATIS MASA SEWA KEDALUWARSA (EXPIRED WARNING) DENGAN TOMBOL NATIVE CTA_URL
+
+- Tanggal: 2026-11-09 17:55
+- Status: Completed
+Referensi SCHEDULE: 20.0
+
+Tujuan Implementasi:
+1. Menambahkan kolom pelacak flag pengiriman peringatan pada tabel `tenants` di `database/master.db`:
+   - `warned_3d INTEGER NOT NULL DEFAULT 0`
+   - `warned_1d INTEGER NOT NULL DEFAULT 0`
+   - `warned_5h INTEGER NOT NULL DEFAULT 0`
+   - `warned_1h INTEGER NOT NULL DEFAULT 0`
+2. Membuat background cron scheduler service `backend/services/expiryWarningService.ts`:
+   - Berjalan berkala setiap 5 menit memeriksa seluruh akun tenant yang aktif.
+   - Mengirim notifikasi pada 4 interval:
+     * H-3 Hari (sisa <= 72 jam dan > 24 jam)
+     * H-1 Hari / 24 Jam (sisa <= 24 jam dan > 5 jam)
+     * H-5 Jam (sisa <= 5 jam dan > 1 jam)
+     * H-1 Jam (sisa <= 1 jam dan > 0)
+   - Format pesan profesional memuat Nama Toko, ID Unit Bot, Waktu Kedaluwarsa, dan tombol interaktif WhatsApp Native bertipe `cta_url` ("Perpanjang Masa Sewa") yang mengarah langsung ke WhatsApp Master Admin.
+3. Menambahkan mekanisme reset flag otomatis saat masa sewa tenant diperpanjang oleh Master Admin di `admin-backend/services/tenantService.ts`.
+4. Mendaftarkan inisialisasi scheduler di `backend/app.ts` atau `server.ts` saat server backend berjalan.
+5. Menambahkan endpoint REST API Master Admin `POST /api/admin/expiry-warning/check-now` untuk memicu pengecekan manual dan pengujian langsung.
+
+Bagian yang Akan Diubah/Dibuat:
+- "admin-backend/database/masterSqlite.ts" - Migrasi kolom warned_3d, warned_1d, warned_5h, warned_1h pada tabel tenants.
+- "admin-backend/types/admin.types.ts" - Penambahan properti flag warned pada interface Tenant dan TenantRecord.
+- "admin-backend/services/tenantService.ts" - Penambahan reset flag saat perpanjangan masa sewa dan pemetaan kolom.
+- "backend/services/expiryWarningService.ts" (Baru) - Service scheduler pengecekan kedaluwarsa dan pengirim pesan tombol interaktif.
+- "admin-backend/routes/adminRoutes.ts" - Endpoint pemicu pengecekan manual /api/admin/expiry-warning/check-now.
+- "server.ts" - Menjalankan inisialisasi background scheduler expiry warning.
+
+Alasan Perubahan:
+Mencegah bot toko tenant mati mendadak tanpa sepengetahuan pemilik toko saat masa sewa habis, memberikan pengalaman pelanggan yang prima, dan memudahkan perpanjangan sewa via tombol satu klik WhatsApp.
+
+Strategi Implementasi:
+1. Perbarui skema database di `masterSqlite.ts` dengan migrasi `ALTER TABLE`.
+2. Perbarui tipe data di `admin.types.ts`.
+3. Buat service `backend/services/expiryWarningService.ts` yang mengalirkan pesan tombol Baileys `cta_url` dengan fallback aman.
+4. Perbarui `tenantService.ts` untuk mereset flag saat perpanjangan masa sewa.
+5. Sambungkan ke server lifecycle dan route admin.
+6. Uji kompilasi, linting, dan verifikasi ketiadaan karakter em-dash (-).
+
+Urutan Pengerjaan:
+1. Update `admin-backend/database/masterSqlite.ts`.
+2. Update `admin-backend/types/admin.types.ts`.
+3. Update `admin-backend/services/tenantService.ts`.
+4. Buat `backend/services/expiryWarningService.ts`.
+5. Update `admin-backend/routes/adminRoutes.ts`.
+6. Update `server.ts`.
+7. Jalankan `compile_applet` dan `lint_applet`.
+8. Verifikasi ketiadaan karakter em-dash (-).
+9. Catat hasil penyelesaian di `PROGRESS.md`.
+
+Dampak Perubahan:
+Sistem multi-tenant kini memiliki automasi peringatan sewa yang berjalan di latar belakang tanpa membebani performa aplikasi.
+
+Rencana Pengujian:
+1. Verifikasi tabel `tenants` memiliki kolom `warned_3d`, `warned_1d`, `warned_5h`, `warned_1h`.
+2. Verifikasi endpoint `POST /api/admin/expiry-warning/check-now` berjalan lancar.
+3. Verifikasi pesan peringatan terformat dengan benar beserta tombol cta_url dan link WhatsApp Master Admin.
+4. Verifikasi `tsc --noEmit` lolos tanpa error.
+
+Hasil yang Diharapkan:
+Fitur peringatan otomatis masa sewa kedaluwarsa beroperasi penuh, anti-spam, dan memberikan tombol perpanjangan langsung ke Master Admin.
+
+---
+
+[47.0] - IMPLEMENTASI PENGATURAN MASA SEWA FLEKSIBEL (MENIT, JAM, HARI, MINGGU, BULAN) PADA DASHBOARD MASTER
+
+- Tanggal: 2026-11-09 21:16
+- Status: Completed
+Referensi SCHEDULE: 29.0
+
+Tujuan Implementasi:
+Mengubah sistem penetapan masa aktif tenant yang sebelumnya hanya berbasis hari (`duration_days`) menjadi sistem multi-unit yang sangat fleksibel (Menit, Jam, Hari, Minggu, Bulan).
+
+Bagian yang Akan Diubah:
+- "admin-backend/types/admin.types.ts" - Update interface input.
+- "admin-backend/services/tenantService.ts" - Update logika kalkulasi `expires_at`.
+- "admin-backend/routes/tenantRoutes.ts" - Update penanganan request body.
+- "admin-frontend/src/components/modals/AddTenantModal.tsx" - Update UI form durasi.
+- "admin-frontend/src/components/modals/ExtendTenantModal.tsx" - Update UI form durasi.
+
+Alasan Perubahan:
+Menjawab kebutuhan admin untuk memberikan akses bot dengan durasi yang sangat spesifik (misal trial 10 menit atau langganan tepat 1 bulan) tanpa perlu menghitung manual jumlah hari.
+
+Strategi Implementasi:
+1. Update Backend:
+   - Tambahkan type `DurationUnit = 'minutes' | 'hours' | 'days' | 'weeks' | 'months'`.
+   - Implementasi helper `calculateExpirationDate(baseDate: Date, amount: number, unit: DurationUnit): Date`.
+   - Update `createTenant` dan `extendDuration` menggunakan helper tersebut.
+2. Update Frontend:
+   - Tambahkan state `durationValue` dan `durationUnit`.
+   - Ganti deretan tombol hari statis dengan input number + select unit.
+   - Tambahkan label pratinjau tanggal kedaluwarsa di bawah input agar admin yakin dengan pilihan waktunya.
+
+Urutan Pengerjaan:
+1. Modifikasi `admin-backend/types/admin.types.ts`.
+2. Modifikasi `admin-backend/services/tenantService.ts`.
+3. Modifikasi `admin-backend/routes/tenantRoutes.ts`.
+4. Modifikasi `admin-frontend/src/components/modals/AddTenantModal.tsx`.
+5. Modifikasi `admin-frontend/src/components/modals/ExtendTenantModal.tsx`.
+6. Jalankan kompilasi dan linting.
+
+Dampak Perubahan:
+Input masa sewa menjadi lebih dinamis. Data di database tetap disimpan dalam format ISO date (`expires_at`), sehingga tidak merusak fitur notifikasi peringatan sewa yang sudah ada.
+
+Rencana Pengujian:
+1. Tes tambah tenant dengan durasi 10 menit, cek apakah status berubah menjadi expired tepat waktu.
+2. Tes perpanjang tenant dengan durasi 1 bulan, pastikan tanggal melompat ke bulan depan dengan tanggal yang sama.
+3. Verifikasi `tsc --noEmit` sukses.
+
+Hasil yang Diharapkan:
+Dashboard Master memiliki kendali penuh dan presisi atas masa aktif seluruh tenant.
 
 
 
+
+
+
+
+
+---
+
+[48.0] - IMPLEMENTASI PERPANJANGAN MASA SEWA DENGAN DURASI FLEKSIBEL (MENIT, JAM, HARI, MINGGU, BULAN)
+
+- Tanggal: 2026-11-09 21:16
+- Status: Completed
+Referensi SCHEDULE: 29.0
+
+Tujuan Implementasi:
+Memperbarui modal perpanjangan masa sewa (`ExtendTenantModal.tsx`) agar mendukung unit durasi yang fleksibel (Menit, Jam, Hari, Minggu, Bulan) selaras dengan fitur penambahan tenant baru.
+
+Bagian yang Akan Diubah:
+- "admin-frontend/src/components/modals/ExtendTenantModal.tsx" - Redesain UI durasi dan update logika pengiriman data ke API.
+
+Alasan Perubahan:
+Admin membutuhkan fleksibilitas dalam memperpanjang masa sewa tenant, tidak hanya terbatas pada hitungan hari (misal: perpanjang 1 jam untuk trial, atau 2 minggu untuk kompensasi).
+
+Strategi Implementasi:
+1. Perbarui state di `ExtendTenantModal.tsx`:
+   - Ganti `extendDays` (number) menjadi `amount` (number) dan `unit` (DurationUnit).
+2. Redesain UI Durasi:
+   - Tambahkan Grid tombol preset cepat (misal: 1 jam, 1 hari, 30 hari, 1 tahun).
+   - Gunakan layout Input Angka + Select Unit berdampingan.
+   - Tambahkan label "Preview Masa Berlaku Baru" yang dinamis berdasarkan kalkulasi sisa waktu + durasi baru.
+3. Gunakan `Intl.DateTimeFormat` dengan timezone `Asia/Jakarta` untuk preview tanggal yang akurat.
+4. Perbarui payload pengiriman ke `/api/admin/tenants/:id/extend` agar mengirim `{ amount, unit, note }`.
+5. Pastikan tombol "Simpan" memiliki state loading.
+
+Urutan Pengerjaan:
+1. Edit `admin-frontend/src/components/modals/ExtendTenantModal.tsx`.
+2. Jalankan `compile_applet` dan `lint_applet` untuk verifikasi.
+3. Catat penyelesaian di `brain/PROGRESS.md` dan perbarui status di `brain/SCHEDULE.md`.
+
+Dampak Perubahan:
+Admin Master dapat memperpanjang masa sewa dengan sangat fleksibel (misal: +15 menit atau +2 bulan) dengan antarmuka yang modern dan informatif.
+
+Rencana Pengujian:
+1. Buka modal perpanjang sewa pada salah satu tenant.
+2. Coba pilih unit "Jam" dan masukkan angka "2".
+3. Pastikan preview tanggal kedaluwarsa bergeser tepat 2 jam dari jadwal semula.
+4. Klik simpan dan pastikan masa sewa di tabel admin terupdate dengan benar.
+
+---
+
+[49.0] - PERBAIKAN VALIDASI INPUT DURASI (ALLOW EMPTY & WARNING MESSAGE)
+
+- Tanggal: 2026-11-09 21:24
+- Status: Completed
+Referensi SCHEDULE: 29.0
+
+Tujuan Implementasi:
+Memperbaiki perilaku input durasi pada `AddTenantModal.tsx` dan `ExtendTenantModal.tsx` agar pengguna dapat menghapus angka sepenuhnya (kolom kosong) saat mengedit, serta menampilkan pesan peringatan jika kolom tersebut kosong.
+
+Bagian yang Akan Diubah:
+- "admin-frontend/src/components/modals/AddTenantModal.tsx" - Update state handling dan penambahan pesan peringatan.
+- "admin-frontend/src/components/modals/ExtendTenantModal.tsx" - Update state handling dan penambahan pesan peringatan.
+
+Alasan Perubahan:
+Saat ini input durasi memaksa nilai kembali ke "1" jika dihapus, yang mengganggu kenyamanan pengguna saat ingin mengetik ulang angka. Pengguna menginginkan kolom bisa kosong dan muncul peringatan instruktif.
+
+Strategi Implementasi:
+1. Ubah tipe state durasi dari `number` menjadi `number | string` agar mendukung string kosong `""`.
+2. Update `onChange` pada input durasi:
+   - Jika `e.target.value` kosong, set state ke `""`.
+   - Jika tidak, set state ke `parseInt(value, 10)`.
+3. Tambahkan elemen pesan peringatan di bawah input durasi:
+   - Muncul hanya jika nilai state adalah string kosong atau NaN.
+   - Teks: "Form Tersebut Wajib Di Isi, Misal : 1".
+   - Gaya: Teks merah kecil (`text-rose-500`) dengan ikon peringatan jika perlu.
+4. Pastikan fungsi kalkulasi preview (`getExpiryPreview`) menangani nilai non-angka dengan aman (menganggapnya 0).
+5. Pastikan tombol submit tetap dinonaktifkan atau memberikan feedback jika form belum valid.
+
+Urutan Pengerjaan:
+1. Edit `admin-frontend/src/components/modals/AddTenantModal.tsx`.
+2. Edit `admin-frontend/src/components/modals/ExtendTenantModal.tsx`.
+3. Verifikasi build dan linting.
+
+Dampak Perubahan:
+Pengalaman pengisian form menjadi lebih natural dan informatif bagi admin.
+
+Rencana Pengujian:
+1. Buka modal tambah/perpanjang tenant.
+2. Hapus angka pada input durasi.
+3. Pastikan angka terhapus (kolom kosong) dan muncul pesan "Form Tersebut Wajib Di Isi, Misal : 1".
+4. Masukkan angka baru dan pastikan pesan peringatan hilang.

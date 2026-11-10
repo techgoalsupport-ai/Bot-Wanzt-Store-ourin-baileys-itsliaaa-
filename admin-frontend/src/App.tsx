@@ -11,6 +11,7 @@ import { ResetPasswordModal } from './components/modals/ResetPasswordModal.tsx';
 import { SendMessageModal } from './components/modals/SendMessageModal.tsx';
 import { DeleteTenantModal } from './components/modals/DeleteTenantModal.tsx';
 import { ToggleSuspendModal } from './components/modals/ToggleSuspendModal.tsx';
+import { TabTemplates } from './components/dashboard/tabs/TabTemplates.tsx';
 import {
   Building2,
   ShieldCheck,
@@ -188,6 +189,10 @@ export default function App() {
                 onOpenDelete={(tenant) => setSelectedTenantForDelete(tenant)}
               />
             </>
+          )}
+
+          {selectedNavTab === 'templates' && (
+            <TabTemplates onRefreshParent={fetchData} />
           )}
 
           {selectedNavTab === 'stats' && (

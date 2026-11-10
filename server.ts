@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import { serverApp } from './backend/app.ts';
+import { startExpiryWarningScheduler } from './backend/services/expiryWarningService.ts';
 
 const __dirname = import.meta.dirname;
 
@@ -84,6 +85,7 @@ async function startServer() {
   serverApp.listen(PORT, '0.0.0.0', () => {
     console.log(`[Wanzt Store] Server berjalan di http://0.0.0.0:${PORT}`);
     console.log(`[Wanzt Store] Mode: ${isProduction ? 'Production' : 'Development'}`);
+    startExpiryWarningScheduler();
   });
 }
 

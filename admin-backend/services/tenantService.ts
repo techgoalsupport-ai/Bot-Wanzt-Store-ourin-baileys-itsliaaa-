@@ -85,6 +85,34 @@ export class TenantService {
     };
   }
 
+  /**
+   * Helper untuk menghitung tanggal kedaluwarsa berdasarkan jumlah dan satuan waktu
+   */
+  static calculateExpirationDate(baseDate: Date, amount: number, unit: string): Date {
+    const newDate = new Date(baseDate.getTime());
+    const val = Math.max(0, amount);
+
+    switch (unit) {
+      case 'minutes':
+        newDate.setMinutes(newDate.getMinutes() + val);
+        break;
+      case 'hours':
+        newDate.setHours(newDate.getHours() + val);
+        break;
+      case 'weeks':
+        newDate.setDate(newDate.getDate() + val * 7);
+        break;
+      case 'months':
+        newDate.setMonth(newDate.getMonth() + val);
+        break;
+      case 'days':
+      default:
+        newDate.setDate(newDate.getDate() + val);
+        break;
+    }
+    return newDate;
+  }
+
   static createTenant(input: CreateTenantInput): CreateTenantResult {
     const db = getMasterDb();
     const rawUsername = input.username?.trim();
@@ -92,7 +120,6 @@ export class TenantService {
     const rawPassword = input.password?.trim();
     const password = rawPassword || generateRandomPassword();
     const passwordHash = hashPassword(password);
-    const duration = input.duration_days || 365;
 
     const storeName = input.store_name?.trim() || '';
     const ownerName = input.owner_name?.trim() || '';
@@ -100,8 +127,15 @@ export class TenantService {
     const tenantId = input.tenant_id || generateCleanId(storeName || username);
 
     const createdAt = new Date();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + duration);
+    let expiresAt: Date;
+
+    if (input.duration_value !== undefined && input.duration_unit) {
+      expiresAt = this.calculateExpirationDate(createdAt, input.duration_value, input.duration_unit);
+    } else {
+      const duration = input.duration_days || 365;
+      expiresAt = new Date(createdAt.getTime());
+      expiresAt.setDate(expiresAt.getDate() + duration);
+    }
 
     db.prepare(`
       INSERT INTO tenants (
@@ -137,7 +171,7 @@ export class TenantService {
     };
   }
 
-  static extendDuration(tenantId: string, days: number, note?: string): TenantRecord {
+  static extendDuration(tenantId: string, amount: number, unit: string = 'days', note?: string): TenantRecord {
     const db = getMasterDb();
     const tenant = this.getTenant(tenantId);
     if (!tenant) throw new Error('Tenant tidak ditemukan');
@@ -146,19 +180,18 @@ export class TenantService {
     const now = new Date().getTime();
     const baseTime = currentExp > now ? currentExp : now;
 
-    const newExp = new Date(baseTime);
-    newExp.setDate(newExp.getDate() + days);
+    const newExp = this.calculateExpirationDate(new Date(baseTime), amount, unit);
 
     db.prepare(`
       UPDATE tenants
-      SET expires_at = ?, status = 'active'
+      SET expires_at = ?, status = 'active', warned_3d = 0, warned_1d = 0, warned_5h = 0, warned_1h = 0
       WHERE tenant_id = ?
     `).run(newExp.toISOString(), tenantId);
 
     db.prepare(`
       INSERT INTO subscription_logs (tenant_id, amount, days_added, note, created_at)
       VALUES (?, ?, ?, ?, ?)
-    `).run(tenantId, 0, days, note || `Perpanjangan sewa +${days} hari`, new Date().toISOString());
+    `).run(tenantId, 0, amount, note || `Perpanjangan sewa +${amount} ${unit}`, new Date().toISOString());
 
     return this.getTenant(tenantId)!;
   }

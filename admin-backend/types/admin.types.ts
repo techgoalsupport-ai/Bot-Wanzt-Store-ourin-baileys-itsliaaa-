@@ -11,10 +11,16 @@ export interface TenantRecord {
   created_at: string;
   expires_at: string;
   notes: string | null;
+  warned_3d?: number;
+  warned_1d?: number;
+  warned_5h?: number;
+  warned_1h?: number;
   days_remaining?: number;
   duration_days?: number;
   bot_status?: 'online' | 'offline';
 }
+
+export type DurationUnit = 'minutes' | 'hours' | 'days' | 'weeks' | 'months';
 
 export interface CreateTenantInput {
   tenant_id?: string;
@@ -24,7 +30,9 @@ export interface CreateTenantInput {
   username?: string;
   password?: string;
   package_name?: string;
-  duration_days?: number;
+  duration_value?: number;
+  duration_unit?: DurationUnit;
+  duration_days?: number; // Keep for backward compatibility
   max_groups?: number;
   notes?: string;
 }
