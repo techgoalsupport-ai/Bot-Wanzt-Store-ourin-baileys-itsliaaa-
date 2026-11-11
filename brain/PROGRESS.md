@@ -1969,3 +1969,81 @@ Hasil:
 2. Muncul peringatan instruktif yang jelas jika kolom kosong.
 3. Form terlindungi dari pengiriman durasi kosong.
 4. Tampilan konsisten dengan standar desain yang bersih dan responsif.
+
+---
+
+[31.0] - KUSTOMISASI LENGKAP RESPON BOT, TEMPLATE MULTI-KATEGORI, DAN DUKUNGAN PLACEHOLDER DINAMIS
+
+- Tanggal: 2026-11-10 13:15
+- Status: Completed
+Referensi LANGKAH_IMPLEMENTASI: 50.0
+
+Pekerjaan yang Dilakukan:
+1. Memperluas skema data perintah bot `CommandsConfig` di backend (`backend/types/bot.types.ts`) dan frontend (`frontend/src/types/dashboard.types.ts`) dengan 11 pasangan teks respon dan footer yang sebelumnya hardcoded:
+   - `paymentSuccessDmText` & `paymentSuccessDmFooter` (Lunas di DM)
+   - `paymentSuccessGroupText` & `paymentSuccessGroupFooter` (Lunas di Grup)
+   - `paymentExpiredText` & `paymentExpiredFooter` (Invoice Kedaluwarsa)
+   - `paymentErrorText` & `paymentErrorFooter` (Kendala Gateway QRIS)
+   - `orderGroupNotifText` & `orderGroupNotifFooter` (Petunjuk Order Grup ke DM)
+   - `stockEmptyText` & `stockEmptyFooter` (Stok Kosong / Restock)
+   - `sessionExpiredText` & `sessionExpiredFooter` (Sesi Checkout Habis 90s)
+   - `promoCancelledText` & `promoCancelledFooter` (Pembatalan Kupon 'BATAL')
+   - `contactOwnerEmptyText` (Kontak Owner Belum Diatur)
+   - `contactAdminEmptyText` (Kontak CS / Admin Belum Diatur)
+   - `expiryWarningOwnerText` & `expiryWarningOwnerFooter` (Peringatan Masa Sewa Bot)
+2. Memperluas `backend/services/placeholderHelper.ts` untuk mendukung seluruh placeholder dinamis:
+   - `{customerName}`, `{senderName}`, `{customerNumber}`, `{senderNumber}`, `{orderId}`, `{produkName}`, `{varian}`, `{price}`, `{totalPrice}`, `{total}`, `{unikCode}`, `{promoCode}`, `{discount}`, `{finalPrice}`, `{reason}`, `{errorMessage}`, `{tenantId}`, `{remainingTime}`, `{sisaWaktu}`, `{expiryDate}`, `{waktuKedaluwarsa}`, `{storeName}`, `{ownerName}`, `{ownerNumber}`, `{adminName}`, `{adminNumber}`, `{webLink}`.
+3. Memperbarui `backend/config/configManager.ts`:
+   - Menambahkan default constants untuk respon transaksi, notifikasi, dan kontak.
+   - Mengintegrasikan pemuatan dan penyimpanan SQLite per-tenant di tabel `commands_config`.
+4. Memperbarui handler pesan bot di backend:
+   - `backend/handlers/messageDispatcher.ts`: Mengganti pesan hardcoded pada penanganan transaksi lunas DM & grup, error gateway QRIS, invoice expired, alur checkout grup ke DM, timeout sesi 90 detik, dan pembatalan kode promo dengan konfigurasi dinamis tenant via `resolvePlaceholders`.
+   - `backend/messages/carouselMessage.ts`: Mengganti pesan stok kosong dengan `config.stockEmptyText`.
+   - `backend/messages/adminContactMessage.ts`: Mengganti respon kontak owner/admin kosong dengan `config.contactOwnerEmptyText` dan `config.contactAdminEmptyText`.
+   - `backend/services/expiryWarningService.ts`: Mengambil template peringatan masa sewa dari master database atau fallback ke default dan memformatnya dengan placeholder.
+5. Memperbarui Master Admin (`admin-backend` dan `admin-frontend`):
+   - Menambahkan 11 kategori baru ke `TemplateCategory` union type.
+   - Auto-seeding 11 template default pada `admin-backend/database/masterSqlite.ts`.
+   - Menambahkan tab filter pills untuk 11 kategori baru pada `admin-frontend/src/components/dashboard/tabs/TabTemplates.tsx`.
+   - Memperbarui modal tambah/edit template `admin-frontend/src/components/modals/AddEditTemplateModal.tsx` dengan pilihan kategori baru dan chip placeholder baru.
+6. Memperbarui Tenant Bot Dashboard (`frontend`):
+   - Menambahkan state, handler `loadInitialConfig`, dan sinkronisasi `syncConfigToServer` pada `frontend/src/hooks/useStoreConfig.ts`.
+   - Memperluas kategori pada `frontend/src/components/modals/TemplatePickerModal.tsx`.
+   - Menambahkan tab baru ('Transaksi', 'Notifikasi', 'Kontak') pada `frontend/src/components/tabs/TabCommand.tsx` dengan kartu editor, chip insert tag, tombol "Pilih Template", tombol "Reset Default", dan tombol "Simpan".
+   - Menghubungkan seluruh props dan aksi simpan di `frontend/src/components/tabs/TabContentRenderer.tsx`.
+7. Menjalankan pengujian kompilasi `compile_applet` dan linting `lint_applet` (100% sukses tanpa error).
+
+File yang Diubah:
+- "backend/types/bot.types.ts"
+- "backend/services/placeholderHelper.ts"
+- "backend/config/configManager.ts"
+- "backend/handlers/messageDispatcher.ts"
+- "backend/messages/carouselMessage.ts"
+- "backend/messages/adminContactMessage.ts"
+- "backend/services/expiryWarningService.ts"
+- "admin-backend/types/admin.types.ts"
+- "admin-backend/services/templateService.ts"
+- "admin-backend/database/masterSqlite.ts"
+- "admin-frontend/src/types/admin.types.ts"
+- "admin-frontend/src/components/dashboard/tabs/TabTemplates.tsx"
+- "admin-frontend/src/components/modals/AddEditTemplateModal.tsx"
+- "frontend/src/types/dashboard.types.ts"
+- "frontend/src/hooks/useStoreConfig.ts"
+- "frontend/src/components/modals/TemplatePickerModal.tsx"
+- "frontend/src/components/tabs/TabCommand.tsx"
+- "frontend/src/components/tabs/TabContentRenderer.tsx"
+- "brain/PROGRESS.md"
+- "brain/SCHEDULE.md"
+- "brain/LANGKAH_IMPLEMENTASI.md"
+
+Alasan Perubahan:
+Memenuhi instruksi pengguna agar seluruh pesan respon bot yang sebelumnya belum dapat dikustomisasi kini dapat diubah bebas oleh tenant maupun master admin dengan pilihan template dan placeholder dinamis yang lengkap.
+
+Hasil:
+1. Seluruh 11 alur pesan bot kini 100% dinamis dan tersimpan per-tenant di SQLite.
+2. Master Admin dapat mengelola, menambah, dan mengedit template untuk 11 kategori baru.
+3. Tenant di dashboard "Respon Bot" dapat memilih template resmi, mengedit teks dan footer, serta menyisipkan variabel placeholder dengan mudah.
+4. Lolos typecheck, build, dan linting.
+
+Kendala:
+Tidak ada.

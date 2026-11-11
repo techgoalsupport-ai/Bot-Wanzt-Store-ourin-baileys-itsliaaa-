@@ -10,6 +10,8 @@ import { getPricingConfig, calculateSellingPrice, calculateSellingPriceForVarian
 import { getPicturePath } from '../services/mediaManager.ts';
 import { getActiveTenantId } from '../database/tenantContext.ts';
 
+import { DEFAULT_STOCK_EMPTY_TEMPLATE } from '../config/configManager.ts';
+
 export async function sendProductVariantsCarousel(
   sock: any,
   config: CommandsConfig,
@@ -29,10 +31,17 @@ export async function sendProductVariantsCarousel(
   const variants = (rawVariants || []).filter((v) => Number(v.stock) > 0);
 
   if (!variants || variants.length === 0) {
+    const stockTpl = config.stockEmptyText || DEFAULT_STOCK_EMPTY_TEMPLATE;
+    const cleanNum = (remoteJid.split('@')[0] || '').replace(/[^0-9]/g, '');
+    const emptyText = resolvePlaceholders(stockTpl, config, {
+      name: productName,
+      customerName: cleanNum,
+      customerNumber: cleanNum,
+    });
     await sock.sendMessage(
       remoteJid,
       {
-        text: `Maaf kak, saat ini varian untuk produk *${productName}* sedang habis (stok kosong). Silakan hubungi admin atau cek kembali nanti ya!`,
+        text: emptyText,
       },
       quotedMsg ? { quoted: quotedMsg } : undefined
     );

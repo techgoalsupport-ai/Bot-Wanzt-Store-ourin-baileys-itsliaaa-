@@ -1,5 +1,7 @@
 import { getMasterDb } from '../../admin-backend/database/masterSqlite.ts';
 import { getBotManager } from '../botManager.ts';
+import { resolvePlaceholders } from '../services/placeholderHelper.ts';
+import { DEFAULT_EXPIRY_WARNING_OWNER_TEMPLATE } from '../config/configManager.ts';
 
 export interface ExpiryCheckResult {
   checkedCount: number;
@@ -60,6 +62,7 @@ async function sendExpiryWarningMessage(
     tenant_id: string;
     store_name: string;
     owner_name: string;
+    owner_phone?: string;
   },
   stageLabel: string,
   formattedExpiry: string
@@ -68,20 +71,33 @@ async function sendExpiryWarningMessage(
     `Halo Master Admin, saya owner dari *${tenant.store_name}* (${tenant.tenant_id}) ingin melakukan perpanjangan masa sewa bot WhatsApp toko kami.`
   )}`;
 
-  const messageText = [
-    `⚠️ *PERINGATAN MASA SEWA BOT WHATSAPP*`,
-    ``,
-    `Halo kak *${tenant.owner_name || 'Owner Toko'}* (*${tenant.store_name}*),`,
-    `Masa aktif sewa bot WhatsApp toko Anda akan segera berakhir dalam *${stageLabel}*.`,
-    ``,
-    `📋 *Rincian Unit Bot:*`,
-    `• Nama Toko: *${tenant.store_name}*`,
-    `• ID Unit: \`${tenant.tenant_id}\``,
-    `• Sisa Waktu: *${stageLabel}*`,
-    `• Waktu Kedaluwarsa: *${formattedExpiry} WIB*`,
-    ``,
-    `Agar operasional pesanan otomatis dan transaksi pelanggan di WhatsApp tidak terputus, silakan lakukan perpanjangan masa sewa ke Master Admin sebelum batas waktu berakhir.`,
-  ].join('\n');
+  let rawTemplate = DEFAULT_EXPIRY_WARNING_OWNER_TEMPLATE;
+  try {
+    const masterDb = getMasterDb();
+    const tplRow = masterDb.prepare("SELECT content FROM message_templates WHERE category = 'expiry_warning_owner' AND is_active = 1 LIMIT 1").get() as any;
+    if (tplRow && tplRow.content) {
+      rawTemplate = tplRow.content;
+    }
+  } catch {}
+
+  const messageText = resolvePlaceholders(
+    rawTemplate,
+    {
+      storeInfo: {
+        storeName: tenant.store_name,
+        ownerName: tenant.owner_name,
+        ownerNumber: tenant.owner_phone || '',
+      },
+      menuButtons: [],
+      menuOutputText: '',
+      listOutputText: '',
+    },
+    {
+      tenantId: tenant.tenant_id,
+      remainingTime: stageLabel,
+      expiryDate: formattedExpiry,
+    }
+  );
 
   const footerText = `${tenant.store_name} Official • Notifikasi Otomatis`;
 

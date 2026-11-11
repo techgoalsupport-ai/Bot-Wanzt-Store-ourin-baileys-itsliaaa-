@@ -251,6 +251,84 @@ export const TabContentRenderer: React.FC<TabContentRendererProps> = ({
           storeConfig.syncConfigToServer(payload);
           showToast('Konfigurasi Konfirmasi & Promo berhasil disimpan!');
         }}
+        // Transaksi
+        paymentSuccessDmText={storeConfig.paymentSuccessDmText}
+        setPaymentSuccessDmText={storeConfig.setPaymentSuccessDmText}
+        paymentSuccessDmFooter={storeConfig.paymentSuccessDmFooter}
+        setPaymentSuccessDmFooter={storeConfig.setPaymentSuccessDmFooter}
+        paymentSuccessGroupText={storeConfig.paymentSuccessGroupText}
+        setPaymentSuccessGroupText={storeConfig.setPaymentSuccessGroupText}
+        paymentSuccessGroupFooter={storeConfig.paymentSuccessGroupFooter}
+        setPaymentSuccessGroupFooter={storeConfig.setPaymentSuccessGroupFooter}
+        paymentExpiredText={storeConfig.paymentExpiredText}
+        setPaymentExpiredText={storeConfig.setPaymentExpiredText}
+        paymentExpiredFooter={storeConfig.paymentExpiredFooter}
+        setPaymentExpiredFooter={storeConfig.setPaymentExpiredFooter}
+        paymentErrorText={storeConfig.paymentErrorText}
+        setPaymentErrorText={storeConfig.setPaymentErrorText}
+        paymentErrorFooter={storeConfig.paymentErrorFooter}
+        setPaymentErrorFooter={storeConfig.setPaymentErrorFooter}
+        onSaveTransaksi={() => {
+          storeConfig.syncConfigToServer({
+            paymentSuccessDmText: storeConfig.paymentSuccessDmText,
+            paymentSuccessDmFooter: storeConfig.paymentSuccessDmFooter,
+            paymentSuccessGroupText: storeConfig.paymentSuccessGroupText,
+            paymentSuccessGroupFooter: storeConfig.paymentSuccessGroupFooter,
+            paymentExpiredText: storeConfig.paymentExpiredText,
+            paymentExpiredFooter: storeConfig.paymentExpiredFooter,
+            paymentErrorText: storeConfig.paymentErrorText,
+            paymentErrorFooter: storeConfig.paymentErrorFooter,
+          });
+          showToast('Konfigurasi Respon Transaksi berhasil disimpan!');
+        }}
+        // Notifikasi
+        orderGroupNotifText={storeConfig.orderGroupNotifText}
+        setOrderGroupNotifText={storeConfig.setOrderGroupNotifText}
+        orderGroupNotifFooter={storeConfig.orderGroupNotifFooter}
+        setOrderGroupNotifFooter={storeConfig.setOrderGroupNotifFooter}
+        stockEmptyText={storeConfig.stockEmptyText}
+        setStockEmptyText={storeConfig.setStockEmptyText}
+        stockEmptyFooter={storeConfig.stockEmptyFooter}
+        setStockEmptyFooter={storeConfig.setStockEmptyFooter}
+        sessionExpiredText={storeConfig.sessionExpiredText}
+        setSessionExpiredText={storeConfig.setSessionExpiredText}
+        sessionExpiredFooter={storeConfig.sessionExpiredFooter}
+        setSessionExpiredFooter={storeConfig.setSessionExpiredFooter}
+        promoCancelledText={storeConfig.promoCancelledText}
+        setPromoCancelledText={storeConfig.setPromoCancelledText}
+        promoCancelledFooter={storeConfig.promoCancelledFooter}
+        setPromoCancelledFooter={storeConfig.setPromoCancelledFooter}
+        onSaveNotifikasi={() => {
+          storeConfig.syncConfigToServer({
+            orderGroupNotifText: storeConfig.orderGroupNotifText,
+            orderGroupNotifFooter: storeConfig.orderGroupNotifFooter,
+            stockEmptyText: storeConfig.stockEmptyText,
+            stockEmptyFooter: storeConfig.stockEmptyFooter,
+            sessionExpiredText: storeConfig.sessionExpiredText,
+            sessionExpiredFooter: storeConfig.sessionExpiredFooter,
+            promoCancelledText: storeConfig.promoCancelledText,
+            promoCancelledFooter: storeConfig.promoCancelledFooter,
+          });
+          showToast('Konfigurasi Respon Notifikasi berhasil disimpan!');
+        }}
+        // Kontak
+        contactOwnerEmptyText={storeConfig.contactOwnerEmptyText}
+        setContactOwnerEmptyText={storeConfig.setContactOwnerEmptyText}
+        contactAdminEmptyText={storeConfig.contactAdminEmptyText}
+        setContactAdminEmptyText={storeConfig.setContactAdminEmptyText}
+        expiryWarningOwnerText={storeConfig.expiryWarningOwnerText}
+        setExpiryWarningOwnerText={storeConfig.setExpiryWarningOwnerText}
+        expiryWarningOwnerFooter={storeConfig.expiryWarningOwnerFooter}
+        setExpiryWarningOwnerFooter={storeConfig.setExpiryWarningOwnerFooter}
+        onSaveKontak={() => {
+          storeConfig.syncConfigToServer({
+            contactOwnerEmptyText: storeConfig.contactOwnerEmptyText,
+            contactAdminEmptyText: storeConfig.contactAdminEmptyText,
+            expiryWarningOwnerText: storeConfig.expiryWarningOwnerText,
+            expiryWarningOwnerFooter: storeConfig.expiryWarningOwnerFooter,
+          });
+          showToast('Konfigurasi Respon Kontak & Sewa berhasil disimpan!');
+        }}
         storeInfo={storeConfig.storeInfo}
         isSavingConfig={storeConfig.isSavingConfig}
         showToast={showToast}

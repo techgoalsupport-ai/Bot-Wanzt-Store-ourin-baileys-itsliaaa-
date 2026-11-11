@@ -270,6 +270,138 @@ export function initMasterDatabase(): Database.Database {
         now
       );
     }
+
+    // 9. Template Pembayaran Sukses (DM)
+    const hasPayDm = (masterDb.prepare("SELECT COUNT(*) as count FROM message_templates WHERE category = 'payment_success_dm'").get() as { count: number }).count;
+    if (hasPayDm === 0) {
+      insertTemplate.run(
+        'Pembayaran Lunas & Verifikasi Sukses (DM)',
+        'payment_success_dm',
+        '🎉 *PEMBAYARAN DITERIMA & LUNAS!*\n\nTerima kasih Kak *{customerName}*, pembayaran untuk pesanan *{produkName} ({varian})* sebesar *Rp {total}* (Order ID: #{orderId}) telah diverifikasi lunas oleh sistem LunasQRIS.\n\nPesanan Anda akan segera diproses oleh sistem atau admin kami.',
+        now,
+        now
+      );
+    }
+
+    // 10. Template Pembayaran Sukses (Grup)
+    const hasPayGrp = (masterDb.prepare("SELECT COUNT(*) as count FROM message_templates WHERE category = 'payment_success_group'").get() as { count: number }).count;
+    if (hasPayGrp === 0) {
+      insertTemplate.run(
+        'Notifikasi Pembayaran Lunas di Grup',
+        'payment_success_group',
+        '✅ Pembayaran untuk *{produkName} ({varian})* oleh @{customerNumber} telah *LUNAS*! Pesanan sedang diproses.',
+        now,
+        now
+      );
+    }
+
+    // 11. Template Pembayaran Kedaluwarsa
+    const hasPayExp = (masterDb.prepare("SELECT COUNT(*) as count FROM message_templates WHERE category = 'payment_expired'").get() as { count: number }).count;
+    if (hasPayExp === 0) {
+      insertTemplate.run(
+        'Pembayaran Kedaluwarsa / Timeout',
+        'payment_expired',
+        '⏰ Waktu pembayaran pesanan *{produkName} ({varian})* (Order: #{orderId}) telah berakhir atau dibatalkan. Silakan pesan kembali jika masih berminat.',
+        now,
+        now
+      );
+    }
+
+    // 12. Template Gateway Error
+    const hasPayErr = (masterDb.prepare("SELECT COUNT(*) as count FROM message_templates WHERE category = 'payment_error'").get() as { count: number }).count;
+    if (hasPayErr === 0) {
+      insertTemplate.run(
+        'Kendala Gateway / Error QRIS',
+        'payment_error',
+        '⚠️ Terjadi kendala saat menerbitkan kode QRIS: {errorMessage}. Silakan coba beberapa saat lagi atau hubungi admin toko.',
+        now,
+        now
+      );
+    }
+
+    // 13. Template Notifikasi Grup Order (Arahkan ke DM)
+    const hasOrderGrp = (masterDb.prepare("SELECT COUNT(*) as count FROM message_templates WHERE category = 'order_group_notif'").get() as { count: number }).count;
+    if (hasOrderGrp === 0) {
+      insertTemplate.run(
+        'Notifikasi Alur Order Grup ke DM',
+        'order_group_notif',
+        'Halo @{customerNumber}, rincian pesanan untuk *{produkName} ({varian})* telah kami kirimkan ke *chat pribadi (DM)* Anda. 💬\n\nSilakan buka chat pribadi untuk memilih menggunakan kupon promo atau langsung melanjutkan pembayaran.',
+        now,
+        now
+      );
+    }
+
+    // 14. Template Stok Kosong
+    const hasStockEmp = (masterDb.prepare("SELECT COUNT(*) as count FROM message_templates WHERE category = 'stock_empty'").get() as { count: number }).count;
+    if (hasStockEmp === 0) {
+      insertTemplate.run(
+        'Pemberitahuan Stok Kosong / Restock',
+        'stock_empty',
+        'Maaf kak @{customerNumber}, saat ini stok atau saldo produk *{produkName} ({varian})* sedang dalam proses restock oleh supplier. Silakan coba kembali nanti atau hubungi admin.',
+        now,
+        now
+      );
+    }
+
+    // 15. Template Sesi Checkout Kedaluwarsa (90 Detik)
+    const hasSessExp = (masterDb.prepare("SELECT COUNT(*) as count FROM message_templates WHERE category = 'checkout_session_expired'").get() as { count: number }).count;
+    if (hasSessExp === 0) {
+      insertTemplate.run(
+        'Sesi Checkout Kedaluwarsa (90 Detik)',
+        'checkout_session_expired',
+        '⏰ Sesi pesanan Anda telah berakhir (melebihi batas waktu). Silakan pilih varian kembali di grup atau katalog toko {storeName}.',
+        now,
+        now
+      );
+    }
+
+    // 16. Template Pembatalan Kupon Promo
+    const hasPromoCancel = (masterDb.prepare("SELECT COUNT(*) as count FROM message_templates WHERE category = 'promo_cancelled'").get() as { count: number }).count;
+    if (hasPromoCancel === 0) {
+      insertTemplate.run(
+        'Pembatalan Kupon Promo (Ketik BATAL)',
+        'promo_cancelled',
+        'Penggunaan kode promo dibatalkan. Menyiapkan invoice pembayaran QRIS dengan harga normal (Rp {price})...',
+        now,
+        now
+      );
+    }
+
+    // 17. Template Kontak Owner Belum Diatur
+    const hasOwnerEmpty = (masterDb.prepare("SELECT COUNT(*) as count FROM message_templates WHERE category = 'contact_owner_empty'").get() as { count: number }).count;
+    if (hasOwnerEmpty === 0) {
+      insertTemplate.run(
+        'Informasi Kontak Owner Belum Diatur',
+        'contact_owner_empty',
+        'Informasi tentang owner belum di set pada toko ini',
+        now,
+        now
+      );
+    }
+
+    // 18. Template Kontak Admin Belum Diatur
+    const hasAdminEmpty = (masterDb.prepare("SELECT COUNT(*) as count FROM message_templates WHERE category = 'contact_admin_empty'").get() as { count: number }).count;
+    if (hasAdminEmpty === 0) {
+      insertTemplate.run(
+        'Informasi Kontak Admin Belum Diatur',
+        'contact_admin_empty',
+        'Informasi tentang admin belum di set pada toko ini',
+        now,
+        now
+      );
+    }
+
+    // 19. Template Peringatan Masa Sewa Kedaluwarsa ke Owner
+    const hasExpiryWarn = (masterDb.prepare("SELECT COUNT(*) as count FROM message_templates WHERE category = 'expiry_warning_owner'").get() as { count: number }).count;
+    if (hasExpiryWarn === 0) {
+      insertTemplate.run(
+        'Peringatan Masa Sewa Bot Kedaluwarsa',
+        'expiry_warning_owner',
+        '⚠️ *PERINGATAN MASA SEWA BOT WHATSAPP*\n\nHalo kak *{ownerName}* (*{storeName}*),\nMasa aktif sewa bot WhatsApp toko Anda akan segera berakhir dalam *{remainingTime}*.\n\n📋 *Rincian Unit Bot:*\n• Nama Toko: *{storeName}*\n• ID Unit: `{tenantId}`\n• Sisa Waktu: *{remainingTime}*\n• Waktu Kedaluwarsa: *{expiryDate} WIB*\n\nAgar operasional pesanan otomatis dan transaksi pelanggan di WhatsApp tidak terputus, silakan lakukan perpanjangan masa sewa ke Master Admin sebelum batas waktu berakhir.',
+        now,
+        now
+      );
+    }
   }
 
   return masterDb;

@@ -275,8 +275,8 @@ const MediaGalleryPicker: React.FC<MediaGalleryPickerProps> = ({
 
 
 interface TabCommandProps {
-  selectedCommand: 'Menu' | 'List' | 'Carousel' | 'Invoice' | 'Confirmation';
-  setSelectedCommand: (cmd: 'Menu' | 'List' | 'Carousel' | 'Invoice' | 'Confirmation') => void;
+  selectedCommand: 'Menu' | 'List' | 'Carousel' | 'Invoice' | 'Confirmation' | 'Transaksi' | 'Notifikasi' | 'Kontak';
+  setSelectedCommand: (cmd: 'Menu' | 'List' | 'Carousel' | 'Invoice' | 'Confirmation' | 'Transaksi' | 'Notifikasi' | 'Kontak') => void;
   // Menu Props
   menuOutputText: string;
   setMenuOutputText: (txt: string) => void;
@@ -325,18 +325,71 @@ interface TabCommandProps {
   confirmFooterText: string;
   setConfirmFooterText: React.Dispatch<React.SetStateAction<string>>;
   onSaveConfirmation: () => void;
+  // Transaksi Props
+  paymentSuccessDmText: string;
+  setPaymentSuccessDmText: (txt: string) => void;
+  paymentSuccessDmFooter: string;
+  setPaymentSuccessDmFooter: React.Dispatch<React.SetStateAction<string>>;
+  paymentSuccessGroupText: string;
+  setPaymentSuccessGroupText: (txt: string) => void;
+  paymentSuccessGroupFooter: string;
+  setPaymentSuccessGroupFooter: React.Dispatch<React.SetStateAction<string>>;
+  paymentExpiredText: string;
+  setPaymentExpiredText: (txt: string) => void;
+  paymentExpiredFooter: string;
+  setPaymentExpiredFooter: React.Dispatch<React.SetStateAction<string>>;
+  paymentErrorText: string;
+  setPaymentErrorText: (txt: string) => void;
+  paymentErrorFooter: string;
+  setPaymentErrorFooter: React.Dispatch<React.SetStateAction<string>>;
+  onSaveTransaksi: () => void;
+  // Notifikasi Props
+  orderGroupNotifText: string;
+  setOrderGroupNotifText: (txt: string) => void;
+  orderGroupNotifFooter: string;
+  setOrderGroupNotifFooter: React.Dispatch<React.SetStateAction<string>>;
+  stockEmptyText: string;
+  stockEmptyFooter: string;
+  setStockEmptyText: (txt: string) => void;
+  setStockEmptyFooter: React.Dispatch<React.SetStateAction<string>>;
+  sessionExpiredText: string;
+  sessionExpiredFooter: string;
+  setSessionExpiredText: (txt: string) => void;
+  setSessionExpiredFooter: React.Dispatch<React.SetStateAction<string>>;
+  promoCancelledText: string;
+  promoCancelledFooter: string;
+  setPromoCancelledText: (txt: string) => void;
+  setPromoCancelledFooter: React.Dispatch<React.SetStateAction<string>>;
+  onSaveNotifikasi: () => void;
+  // Kontak Props
+  contactOwnerEmptyText: string;
+  setContactOwnerEmptyText: (txt: string) => void;
+  contactAdminEmptyText: string;
+  setContactAdminEmptyText: (txt: string) => void;
+  expiryWarningOwnerText: string;
+  setExpiryWarningOwnerText: (txt: string) => void;
+  expiryWarningOwnerFooter: string;
+  setExpiryWarningOwnerFooter: React.Dispatch<React.SetStateAction<string>>;
+  onSaveKontak: () => void;
   // General Props
   storeInfo: StoreInfoConfig;
   isSavingConfig: boolean;
   showToast: (msg: string) => void;
 }
 
-const COMMAND_TABS: Array<{ id: 'Menu' | 'List' | 'Carousel' | 'Invoice' | 'Confirmation'; label: string; desc: string }> = [
+const COMMAND_TABS: Array<{
+  id: 'Menu' | 'List' | 'Carousel' | 'Invoice' | 'Confirmation' | 'Transaksi' | 'Notifikasi' | 'Kontak';
+  label: string;
+  desc: string;
+}> = [
   { id: 'Menu', label: 'Menu', desc: 'Respon awal bot' },
   { id: 'List', label: 'List', desc: 'Daftar katalog produk' },
   { id: 'Carousel', label: 'Carousel', desc: 'Kartu varian produk' },
   { id: 'Invoice', label: 'Invoice', desc: 'Tagihan QRIS otomatis' },
   { id: 'Confirmation', label: 'Konfirmasi', desc: 'Ringkasan & promo checkout' },
+  { id: 'Transaksi', label: 'Transaksi', desc: 'Lunas, expired & error QRIS' },
+  { id: 'Notifikasi', label: 'Notifikasi', desc: 'Alur order grup, stok & sesi' },
+  { id: 'Kontak', label: 'Kontak & Info', desc: 'Kontak owner, admin & sewa bot' },
 ];
 
 export const TabCommand: React.FC<TabCommandProps> = ({
@@ -385,6 +438,52 @@ export const TabCommand: React.FC<TabCommandProps> = ({
   confirmFooterText,
   setConfirmFooterText,
   onSaveConfirmation,
+  // Transaksi
+  paymentSuccessDmText,
+  setPaymentSuccessDmText,
+  paymentSuccessDmFooter,
+  setPaymentSuccessDmFooter,
+  paymentSuccessGroupText,
+  setPaymentSuccessGroupText,
+  paymentSuccessGroupFooter,
+  setPaymentSuccessGroupFooter,
+  paymentExpiredText,
+  setPaymentExpiredText,
+  paymentExpiredFooter,
+  setPaymentExpiredFooter,
+  paymentErrorText,
+  setPaymentErrorText,
+  paymentErrorFooter,
+  setPaymentErrorFooter,
+  onSaveTransaksi,
+  // Notifikasi
+  orderGroupNotifText,
+  setOrderGroupNotifText,
+  orderGroupNotifFooter,
+  setOrderGroupNotifFooter,
+  stockEmptyText,
+  stockEmptyFooter,
+  setStockEmptyText,
+  setStockEmptyFooter,
+  sessionExpiredText,
+  sessionExpiredFooter,
+  setSessionExpiredText,
+  setSessionExpiredFooter,
+  promoCancelledText,
+  promoCancelledFooter,
+  setPromoCancelledText,
+  setPromoCancelledFooter,
+  onSaveNotifikasi,
+  // Kontak
+  contactOwnerEmptyText,
+  setContactOwnerEmptyText,
+  contactAdminEmptyText,
+  setContactAdminEmptyText,
+  expiryWarningOwnerText,
+  setExpiryWarningOwnerText,
+  expiryWarningOwnerFooter,
+  setExpiryWarningOwnerFooter,
+  onSaveKontak,
   isSavingConfig,
   showToast,
 }) => {
@@ -1365,6 +1464,812 @@ export const TabCommand: React.FC<TabCommandProps> = ({
                   <Check className="w-3.5 h-3.5" />
                 )}
                 Simpan Konfirmasi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* COMMAND: TRANSAKSI */}
+      {selectedCommand === 'Transaksi' && (
+        <div className="space-y-5">
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 tracking-tight">Kustomisasi Respon Transaksi QRIS</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Atur pesan otomatis saat pembayaran lunas di DM, pengumuman di grup, invoice kedaluwarsa, dan kendala gateway.
+              </p>
+            </div>
+
+            {/* 1. Pembayaran Lunas (DM) */}
+            <div className="space-y-2 pt-3 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-800">
+                    1. Template Pesan Pembayaran Lunas (Kirim ke DM Pembeli)
+                  </label>
+                  <p className="text-[11px] text-slate-500">Dikirim otomatis ke pembeli begitu transfer QRIS terverifikasi lunas.</p>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('payment_success_dm', 'Transaksi Lunas (DM)', paymentSuccessDmText, setPaymentSuccessDmText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentSuccessDmText('🎉 *PEMBAYARAN DITERIMA & LUNAS!*\nTerima kasih kak *{customerName}*, pembayaran untuk pesanan Anda berhasil diverifikasi otomatis.\n\n📦 *Detail Transaksi:*\n• *Order ID:* `{orderId}`\n• *Produk:* {produkName}\n• *Varian:* {varian}\n• *Total Bayar:* Rp {totalPrice}\n• *Waktu:* {paymentExpiry}\n\nDetail akun / layanan Anda akan diproses dan dikirimkan segera di bawah ini.');
+                      showToast('Template lunas DM direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
+              </div>
+
+              {/* Tag Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 py-1">
+                {['{customerName}', '{customerNumber}', '{orderId}', '{produkName}', '{varian}', '{totalPrice}', '{paymentExpiry}', '{storeName}'].map((ph) => (
+                  <button
+                    key={ph}
+                    type="button"
+                    onClick={() => insertTag(ph, paymentSuccessDmText, setPaymentSuccessDmText)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono bg-slate-50 text-slate-700 hover:bg-sky-50 hover:text-[#0084D1] border border-slate-200 hover:border-sky-300 transition cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3 text-[#0084D1]" />
+                    <span>{ph}</span>
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                rows={6}
+                value={paymentSuccessDmText}
+                onChange={(e) => setPaymentSuccessDmText(e.target.value)}
+                placeholder="Tulis format pesan pembayaran lunas DM di sini..."
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition font-mono leading-relaxed"
+              />
+
+              {/* Footer DM */}
+              <div className="pt-1.5">
+                <label className="text-[11px] font-semibold text-slate-700 block mb-1">Teks Footer DM Lunas</label>
+                <input
+                  type="text"
+                  value={paymentSuccessDmFooter}
+                  onChange={(e) => setPaymentSuccessDmFooter(e.target.value)}
+                  placeholder="{storeName} • Layanan Otomatis 24/7"
+                  className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition"
+                />
+              </div>
+            </div>
+
+            {/* 2. Pembayaran Lunas (Grup) */}
+            <div className="space-y-2 pt-3 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-800">
+                    2. Template Notifikasi Lunas di Grup WhatsApp
+                  </label>
+                  <p className="text-[11px] text-slate-500">Pemberitahuan bukti transaksi lunas di grup tanpa membocorkan data akun rahasia.</p>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('payment_success_group', 'Transaksi Lunas (Grup)', paymentSuccessGroupText, setPaymentSuccessGroupText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentSuccessGroupText('🎉 *TRANSAKSI BERHASIL (LUNAS)*\n\nPembayaran untuk *{produkName}* ({varian}) berhasil diverifikasi otomatis oleh sistem!\n\n• *Order ID:* `{orderId}`\n• *Pembeli:* @{customerNumber}\n• *Total:* Rp {totalPrice}\n\nDetail pesanan telah dikirimkan ke nomor pembeli via chat pribadi (DM). Terima kasih telah berbelanja di *{storeName}*! ✨');
+                      showToast('Template lunas grup direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
+              </div>
+
+              {/* Tag Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 py-1">
+                {['{customerNumber}', '{orderId}', '{produkName}', '{varian}', '{totalPrice}', '{storeName}'].map((ph) => (
+                  <button
+                    key={ph}
+                    type="button"
+                    onClick={() => insertTag(ph, paymentSuccessGroupText, setPaymentSuccessGroupText)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono bg-slate-50 text-slate-700 hover:bg-sky-50 hover:text-[#0084D1] border border-slate-200 hover:border-sky-300 transition cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3 text-[#0084D1]" />
+                    <span>{ph}</span>
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                rows={6}
+                value={paymentSuccessGroupText}
+                onChange={(e) => setPaymentSuccessGroupText(e.target.value)}
+                placeholder="Tulis format pengumuman lunas grup di sini..."
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition font-mono leading-relaxed"
+              />
+
+              {/* Footer Grup */}
+              <div className="pt-1.5">
+                <label className="text-[11px] font-semibold text-slate-700 block mb-1">Teks Footer Grup Lunas</label>
+                <input
+                  type="text"
+                  value={paymentSuccessGroupFooter}
+                  onChange={(e) => setPaymentSuccessGroupFooter(e.target.value)}
+                  placeholder="{storeName} Official Bot"
+                  className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition"
+                />
+              </div>
+            </div>
+
+            {/* 3. Pembayaran Kedaluwarsa */}
+            <div className="space-y-2 pt-3 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-800">
+                    3. Template Pesan Tagihan QRIS Kedaluwarsa / Timeout
+                  </label>
+                  <p className="text-[11px] text-slate-500">Dikirim saat invoice QRIS melewati batas waktu toleransi pembayaran.</p>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('payment_expired', 'Transaksi Kedaluwarsa', paymentExpiredText, setPaymentExpiredText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentExpiredText('⏰ *INVOICE KEDALUWARSA*\nInvoice pembayaran QRIS dengan Order ID `{orderId}` telah kedaluwarsa karena melewati batas waktu toleransi.\n\nSilakan buat pesanan baru melalui menu katalog kami jika masih berminat memesan.');
+                      showToast('Template expired direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
+              </div>
+
+              {/* Tag Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 py-1">
+                {['{orderId}', '{storeName}', '{webLink}'].map((ph) => (
+                  <button
+                    key={ph}
+                    type="button"
+                    onClick={() => insertTag(ph, paymentExpiredText, setPaymentExpiredText)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono bg-slate-50 text-slate-700 hover:bg-sky-50 hover:text-[#0084D1] border border-slate-200 hover:border-sky-300 transition cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3 text-[#0084D1]" />
+                    <span>{ph}</span>
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                rows={4}
+                value={paymentExpiredText}
+                onChange={(e) => setPaymentExpiredText(e.target.value)}
+                placeholder="Tulis pesan tagihan kedaluwarsa di sini..."
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition font-mono leading-relaxed"
+              />
+
+              {/* Footer Expired */}
+              <div className="pt-1.5">
+                <label className="text-[11px] font-semibold text-slate-700 block mb-1">Teks Footer Kedaluwarsa</label>
+                <input
+                  type="text"
+                  value={paymentExpiredFooter}
+                  onChange={(e) => setPaymentExpiredFooter(e.target.value)}
+                  placeholder="{storeName} • Auto-Cancel Invoice"
+                  className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition"
+                />
+              </div>
+            </div>
+
+            {/* 4. Kendala Pembuatan Invoice Gateway */}
+            <div className="space-y-2 pt-3 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-800">
+                    4. Template Pesan Kendala Gateway Pembayaran QRIS
+                  </label>
+                  <p className="text-[11px] text-slate-500">Pesan darurat jika API payment gateway mengalami gangguan teknis saat menerbitkan QRIS.</p>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('payment_error', 'Kendala Gateway QRIS', paymentErrorText, setPaymentErrorText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentErrorText('⚠️ *KENDALA PEMBUATAN INVOICE QRIS*\nMaaf kak, sistem kami mengalami kendala teknis saat menerbitkan kode pembayaran QRIS.\n\nKeterangan: *{errorMessage}*\n\nSilakan coba lagi beberapa saat lagi atau hubungi CS kami: wa.me/{adminNumber}');
+                      showToast('Template kendala gateway direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
+              </div>
+
+              {/* Tag Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 py-1">
+                {['{errorMessage}', '{adminNumber}', '{ownerNumber}', '{storeName}'].map((ph) => (
+                  <button
+                    key={ph}
+                    type="button"
+                    onClick={() => insertTag(ph, paymentErrorText, setPaymentErrorText)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono bg-slate-50 text-slate-700 hover:bg-sky-50 hover:text-[#0084D1] border border-slate-200 hover:border-sky-300 transition cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3 text-[#0084D1]" />
+                    <span>{ph}</span>
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                rows={4}
+                value={paymentErrorText}
+                onChange={(e) => setPaymentErrorText(e.target.value)}
+                placeholder="Tulis pesan kendala gateway QRIS di sini..."
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition font-mono leading-relaxed"
+              />
+
+              {/* Footer Error */}
+              <div className="pt-1.5">
+                <label className="text-[11px] font-semibold text-slate-700 block mb-1">Teks Footer Kendala Gateway</label>
+                <input
+                  type="text"
+                  value={paymentErrorFooter}
+                  onChange={(e) => setPaymentErrorFooter(e.target.value)}
+                  placeholder="{storeName} • Bantuan Pelanggan"
+                  className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition"
+                />
+              </div>
+            </div>
+
+            {/* Save Button Transaksi */}
+            <div className="pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                disabled={isSavingConfig}
+                onClick={() => onSaveTransaksi()}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0084D1] hover:bg-[#0073b7] active:scale-[0.98] text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {isSavingConfig ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Check className="w-3.5 h-3.5" />
+                )}
+                Simpan Respon Transaksi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* COMMAND: NOTIFIKASI */}
+      {selectedCommand === 'Notifikasi' && (
+        <div className="space-y-5">
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 tracking-tight">Kustomisasi Respon Notifikasi Sistem</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Kelola pesan otomatis untuk alur order dari grup, ketersediaan stok produk, timeout sesi, dan pembatalan voucher promo.
+              </p>
+            </div>
+
+            {/* 1. Alur Order Grup ke DM */}
+            <div className="space-y-2 pt-3 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-800">
+                    1. Template Notifikasi Alur Order Dari Grup ke DM
+                  </label>
+                  <p className="text-[11px] text-slate-500">Pemberitahuan di grup saat pembeli klik checkout agar melanjutkan konfirmasi di chat pribadi bot.</p>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('order_group_notif', 'Alur Order Grup', orderGroupNotifText, setOrderGroupNotifText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOrderGroupNotifText('👋 Halo kak @{customerNumber}!\n\nUntuk kenyamanan dan privasi transaksi Anda, proses checkout & konfirmasi pesanan *{produkName}* telah kami kirimkan ke chat pribadi (DM) Anda.\n\nSilakan buka chat pribadi dari bot ini untuk memilih opsi promo dan melihat invoice QRIS. Terima kasih! ✨');
+                      showToast('Template notif alur grup direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
+              </div>
+
+              {/* Tag Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 py-1">
+                {['{customerNumber}', '{produkName}', '{storeName}'].map((ph) => (
+                  <button
+                    key={ph}
+                    type="button"
+                    onClick={() => insertTag(ph, orderGroupNotifText, setOrderGroupNotifText)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono bg-slate-50 text-slate-700 hover:bg-sky-50 hover:text-[#0084D1] border border-slate-200 hover:border-sky-300 transition cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3 text-[#0084D1]" />
+                    <span>{ph}</span>
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                rows={5}
+                value={orderGroupNotifText}
+                onChange={(e) => setOrderGroupNotifText(e.target.value)}
+                placeholder="Tulis pesan petunjuk alur grup ke DM di sini..."
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition font-mono leading-relaxed"
+              />
+
+              {/* Footer Alur Grup */}
+              <div className="pt-1.5">
+                <label className="text-[11px] font-semibold text-slate-700 block mb-1">Teks Footer Alur Grup</label>
+                <input
+                  type="text"
+                  value={orderGroupNotifFooter}
+                  onChange={(e) => setOrderGroupNotifFooter(e.target.value)}
+                  placeholder="{storeName} Official"
+                  className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition"
+                />
+              </div>
+            </div>
+
+            {/* 2. Stok Kosong */}
+            <div className="space-y-2 pt-3 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-800">
+                    2. Template Pesan Stok Produk Kosong / Habis
+                  </label>
+                  <p className="text-[11px] text-slate-500">Balasan bot ketika pembeli memilih produk atau varian yang stoknya 0.</p>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('stock_empty', 'Stok Kosong', stockEmptyText, setStockEmptyText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStockEmptyText('⚠️ *STOK SEDANG KOSONG*\nMohon maaf kak, produk/varian *{varian}* saat ini sedang habis terjual.\n\nTim kami sedang melakukan restock secepatnya. Silakan pantau terus katalog kami ya!');
+                      showToast('Template stok kosong direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
+              </div>
+
+              {/* Tag Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 py-1">
+                {['{varian}', '{produkName}', '{storeName}'].map((ph) => (
+                  <button
+                    key={ph}
+                    type="button"
+                    onClick={() => insertTag(ph, stockEmptyText, setStockEmptyText)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono bg-slate-50 text-slate-700 hover:bg-sky-50 hover:text-[#0084D1] border border-slate-200 hover:border-sky-300 transition cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3 text-[#0084D1]" />
+                    <span>{ph}</span>
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                rows={4}
+                value={stockEmptyText}
+                onChange={(e) => setStockEmptyText(e.target.value)}
+                placeholder="Tulis pesan stok kosong di sini..."
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition font-mono leading-relaxed"
+              />
+
+              {/* Footer Stok Kosong */}
+              <div className="pt-1.5">
+                <label className="text-[11px] font-semibold text-slate-700 block mb-1">Teks Footer Stok Kosong</label>
+                <input
+                  type="text"
+                  value={stockEmptyFooter}
+                  onChange={(e) => setStockEmptyFooter(e.target.value)}
+                  placeholder="{storeName} • Info Ketersediaan Stok"
+                  className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition"
+                />
+              </div>
+            </div>
+
+            {/* 3. Sesi Checkout Habis */}
+            <div className="space-y-2 pt-3 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-800">
+                    3. Template Peringatan Sesi Checkout Habis (Timeout 90s)
+                  </label>
+                  <p className="text-[11px] text-slate-500">Peringatan saat pembeli mengabaikan konfirmasi order atau input kupon promo lebih dari 90 detik.</p>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('checkout_session_expired', 'Sesi Checkout Habis', sessionExpiredText, setSessionExpiredText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSessionExpiredText('⏱️ *SESI TRANSAKSI KEDALUWARSA*\nBatas waktu transaksi 90 detik telah berakhir karena tidak ada aktivitas respon.\n\nSesi pembelian ini dibatalkan secara otomatis demi keamanan sistem. Silakan ulangi pemesanan produk jika Anda masih ingin melanjutkan.');
+                      showToast('Template sesi habis direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
+              </div>
+
+              {/* Tag Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 py-1">
+                {['{storeName}', '{webLink}'].map((ph) => (
+                  <button
+                    key={ph}
+                    type="button"
+                    onClick={() => insertTag(ph, sessionExpiredText, setSessionExpiredText)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono bg-slate-50 text-slate-700 hover:bg-sky-50 hover:text-[#0084D1] border border-slate-200 hover:border-sky-300 transition cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3 text-[#0084D1]" />
+                    <span>{ph}</span>
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                rows={4}
+                value={sessionExpiredText}
+                onChange={(e) => setSessionExpiredText(e.target.value)}
+                placeholder="Tulis pesan timeout transaksi di sini..."
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition font-mono leading-relaxed"
+              />
+
+              {/* Footer Sesi Habis */}
+              <div className="pt-1.5">
+                <label className="text-[11px] font-semibold text-slate-700 block mb-1">Teks Footer Timeout Sesi</label>
+                <input
+                  type="text"
+                  value={sessionExpiredFooter}
+                  onChange={(e) => setSessionExpiredFooter(e.target.value)}
+                  placeholder="{storeName} • Auto-Timeout System"
+                  className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition"
+                />
+              </div>
+            </div>
+
+            {/* 4. Pembatalan Kupon Promo */}
+            <div className="space-y-2 pt-3 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-800">
+                    4. Template Konfirmasi Pembatalan Kupon Promo ('BATAL')
+                  </label>
+                  <p className="text-[11px] text-slate-500">Pesan saat pembeli mengetik kata 'BATAL' saat proses input kupon untuk lanjut bayar harga normal.</p>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('promo_cancelled', 'Kupon Dibatalkan', promoCancelledText, setPromoCancelledText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPromoCancelledText('✅ *PENGGUNAAN KODE PROMO DIBATALKAN*\nKupon promo berhasil dibatalkan. Pesanan Anda akan diproses dengan harga normal *Rp {price}*.\n\nInvoice QRIS sedang diterbitkan...');
+                      showToast('Template batal promo direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
+              </div>
+
+              {/* Tag Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 py-1">
+                {['{price}', '{storeName}'].map((ph) => (
+                  <button
+                    key={ph}
+                    type="button"
+                    onClick={() => insertTag(ph, promoCancelledText, setPromoCancelledText)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono bg-slate-50 text-slate-700 hover:bg-sky-50 hover:text-[#0084D1] border border-slate-200 hover:border-sky-300 transition cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3 text-[#0084D1]" />
+                    <span>{ph}</span>
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                rows={4}
+                value={promoCancelledText}
+                onChange={(e) => setPromoCancelledText(e.target.value)}
+                placeholder="Tulis pesan pembatalan kupon promo di sini..."
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition font-mono leading-relaxed"
+              />
+
+              {/* Footer Batal Promo */}
+              <div className="pt-1.5">
+                <label className="text-[11px] font-semibold text-slate-700 block mb-1">Teks Footer Batal Promo</label>
+                <input
+                  type="text"
+                  value={promoCancelledFooter}
+                  onChange={(e) => setPromoCancelledFooter(e.target.value)}
+                  placeholder="{storeName} • Checkout Normal"
+                  className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition"
+                />
+              </div>
+            </div>
+
+            {/* Save Button Notifikasi */}
+            <div className="pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                disabled={isSavingConfig}
+                onClick={() => onSaveNotifikasi()}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0084D1] hover:bg-[#0073b7] active:scale-[0.98] text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {isSavingConfig ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Check className="w-3.5 h-3.5" />
+                )}
+                Simpan Respon Notifikasi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* COMMAND: KONTAK & INFO */}
+      {selectedCommand === 'Kontak' && (
+        <div className="space-y-5">
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 tracking-tight">Kustomisasi Kontak Toko & Peringatan Sewa</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Konfigurasi respon bot saat nomor kontak owner atau admin belum terisi, dan format peringatan sisa masa aktif sewa bot toko.
+              </p>
+            </div>
+
+            {/* 1. Kontak Owner Kosong */}
+            <div className="space-y-2 pt-3 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-800">
+                    1. Balasan Pesan Saat Kontak Owner Belum Diatur
+                  </label>
+                  <p className="text-[11px] text-slate-500">Dikirim jika pelanggan mengetik perintah /owner namun nomor WhatsApp owner belum diset.</p>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('contact_owner_empty', 'Kontak Owner Belum Diatur', contactOwnerEmptyText, setContactOwnerEmptyText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setContactOwnerEmptyText('ℹ️ *INFORMASI KONTAK OWNER*\nKontak WhatsApp Owner saat ini belum dikonfigurasi di dashboard bot toko ini.\n\nSilakan hubungi admin bot atau coba kembali nanti.');
+                      showToast('Template kontak owner kosong direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
+              </div>
+
+              {/* Tag Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 py-1">
+                {['{storeName}', '{webLink}', '{adminNumber}'].map((ph) => (
+                  <button
+                    key={ph}
+                    type="button"
+                    onClick={() => insertTag(ph, contactOwnerEmptyText, setContactOwnerEmptyText)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono bg-slate-50 text-slate-700 hover:bg-sky-50 hover:text-[#0084D1] border border-slate-200 hover:border-sky-300 transition cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3 text-[#0084D1]" />
+                    <span>{ph}</span>
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                rows={4}
+                value={contactOwnerEmptyText}
+                onChange={(e) => setContactOwnerEmptyText(e.target.value)}
+                placeholder="Tulis respon kontak owner belum diatur..."
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition font-mono leading-relaxed"
+              />
+            </div>
+
+            {/* 2. Kontak Admin Kosong */}
+            <div className="space-y-2 pt-3 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-800">
+                    2. Balasan Pesan Saat Kontak CS / Admin Belum Diatur
+                  </label>
+                  <p className="text-[11px] text-slate-500">Dikirim jika pelanggan mengetik perintah /admin namun nomor CS / admin belum diset.</p>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('contact_admin_empty', 'Kontak Admin Belum Diatur', contactAdminEmptyText, setContactAdminEmptyText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setContactAdminEmptyText('ℹ️ *INFORMASI LAYANAN PELANGGAN (CS)*\nKontak Customer Service / Admin saat ini belum dikonfigurasi di dashboard bot toko ini.\n\nSilakan coba hubungi pemilik toko atau coba kembali nanti.');
+                      showToast('Template kontak admin kosong direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
+              </div>
+
+              {/* Tag Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 py-1">
+                {['{storeName}', '{webLink}', '{ownerNumber}'].map((ph) => (
+                  <button
+                    key={ph}
+                    type="button"
+                    onClick={() => insertTag(ph, contactAdminEmptyText, setContactAdminEmptyText)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono bg-slate-50 text-slate-700 hover:bg-sky-50 hover:text-[#0084D1] border border-slate-200 hover:border-sky-300 transition cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3 text-[#0084D1]" />
+                    <span>{ph}</span>
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                rows={4}
+                value={contactAdminEmptyText}
+                onChange={(e) => setContactAdminEmptyText(e.target.value)}
+                placeholder="Tulis respon kontak CS / admin belum diatur..."
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition font-mono leading-relaxed"
+              />
+            </div>
+
+            {/* 3. Peringatan Masa Sewa Bot WhatsApp */}
+            <div className="space-y-2 pt-3 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-800">
+                    3. Template Peringatan Masa Sewa Bot WhatsApp Kedaluwarsa
+                  </label>
+                  <p className="text-[11px] text-slate-500">Notifikasi otomatis yang dikirim ke nomor WhatsApp owner toko sebelum masa aktif bot habis.</p>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => openTemplatePicker('expiry_warning_owner', 'Peringatan Masa Sewa Bot', expiryWarningOwnerText, setExpiryWarningOwnerText)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-[#0084D1] text-[#0084D1] hover:text-white border border-sky-200 hover:border-transparent text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    <span>Pilih Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExpiryWarningOwnerText('⚠️ *PERINGATAN MASA AKTIF BOT WHATSAPP*\nHalo *{ownerName}*, bot toko *{storeName}* (Tenant ID: `{tenantId}`) memiliki sisa masa aktif *{remainingTime}*.\n\nMasa sewa akan kedaluwarsa pada:\n📅 *{expiryDate}*\n\nSegera hubungi Master Admin untuk memperpanjang masa aktif agar layanan bot WhatsApp toko Anda tidak terhenti otomatis.');
+                      showToast('Template peringatan masa sewa direset ke default');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
+              </div>
+
+              {/* Tag Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 py-1">
+                {['{ownerName}', '{storeName}', '{tenantId}', '{remainingTime}', '{expiryDate}'].map((ph) => (
+                  <button
+                    key={ph}
+                    type="button"
+                    onClick={() => insertTag(ph, expiryWarningOwnerText, setExpiryWarningOwnerText)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono bg-slate-50 text-slate-700 hover:bg-sky-50 hover:text-[#0084D1] border border-slate-200 hover:border-sky-300 transition cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3 text-[#0084D1]" />
+                    <span>{ph}</span>
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                rows={5}
+                value={expiryWarningOwnerText}
+                onChange={(e) => setExpiryWarningOwnerText(e.target.value)}
+                placeholder="Tulis pesan peringatan masa sewa bot di sini..."
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition font-mono leading-relaxed"
+              />
+
+              {/* Footer Peringatan */}
+              <div className="pt-1.5">
+                <label className="text-[11px] font-semibold text-slate-700 block mb-1">Teks Footer Peringatan Sewa</label>
+                <input
+                  type="text"
+                  value={expiryWarningOwnerFooter}
+                  onChange={(e) => setExpiryWarningOwnerFooter(e.target.value)}
+                  placeholder="Sistem Notifikasi Otomatis Master Server"
+                  className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/15 transition"
+                />
+              </div>
+            </div>
+
+            {/* Save Button Kontak */}
+            <div className="pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                disabled={isSavingConfig}
+                onClick={() => onSaveKontak()}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0084D1] hover:bg-[#0073b7] active:scale-[0.98] text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {isSavingConfig ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Check className="w-3.5 h-3.5" />
+                )}
+                Simpan Respon Kontak
               </button>
             </div>
           </div>

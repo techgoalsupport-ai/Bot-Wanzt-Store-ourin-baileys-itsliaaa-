@@ -1025,4 +1025,40 @@ Rencana:
 Hasil yang Diharapkan:
 Admin dapat menetapkan masa aktif tenant dengan sangat presisi (misal: 15 menit atau 1 bulan) langsung dari antarmuka Dashboard Master.
 
+---
 
+[30.0] - KUSTOMISASI LENGKAP RESPON BOT: TEMPLATE MASTER & BOT DASHBOARD, KATEGORI BARU, DAN PLACEHOLDER DINAMIS
+
+- Tanggal: 2026-11-10 12:56
+- Status: Completed
+
+Tujuan:
+Menerapkan kustomisasi penuh pada seluruh respon bot yang sebelumnya masih hardcoded di backend, menyediakan template siap pakai yang dapat diedit di Dashboard Master dan Dashboard Bot, mengatur kategori pesan secara terisolasi (anti-campur), dan melengkapi dukungan variabel placeholder dinamis beserta penjelasannya.
+
+Rencana:
+1. Tahap 1: Pembaharuan Skema Tipe Data & Placeholder Helper:
+   - Perluas interface `CommandsConfig` di `backend/types/bot.types.ts` dan `frontend/src/types/dashboard.types.ts`.
+   - Perbarui `backend/services/placeholderHelper.ts` untuk menangani placeholder baru: `{customerName}`, `{senderName}`, `{customerNumber}`, `{senderNumber}`, `{errorMessage}`, `{reason}`, `{remainingTime}`, `{sisaWaktu}`, `{expiryDate}`, `{waktuKedaluwarsa}`, `{tenantId}`.
+2. Tahap 2: Pembaharuan Database Master & Backend Template:
+   - Perluas union `TemplateCategory` pada `admin-backend/types/admin.types.ts`, `admin-backend/services/templateService.ts`, dan `admin-frontend/src/types/admin.types.ts`.
+   - Seed default templates di `admin-backend/database/masterSqlite.ts` untuk 11 kategori baru.
+   - Perbarui `backend/config/configManager.ts` untuk memuat dan menyimpan konfigurasi respon bot baru ke SQLite per-tenant.
+3. Tahap 3: Penggantian Pesan Hardcoded di Bot Handlers:
+   - `backend/handlers/messageDispatcher.ts`: Notifikasi pembayaran sukses DM & Grup, pembayaran expired, error gateway QRIS, notif grup redirect DM, stok habis, sesi checkout expired, pembatalan promo.
+   - `backend/messages/carouselMessage.ts`: Pesan stok habis seluruh varian.
+   - `backend/messages/adminContactMessage.ts`: Pesan status kontak owner dan admin belum disetel.
+   - `backend/services/expiryWarningService.ts`: Pesan pengingat masa sewa kedaluwarsa ke owner tenant.
+4. Tahap 4: Pembaharuan Antarmuka Dashboard Master Admin (`admin-frontend`):
+   - Tambahkan filter pills dan badge warna untuk kategori-kategori baru di `TabTemplates.tsx`.
+   - Tambahkan opsi kategori baru, deskripsi fungsi, dan chip placeholder di `AddEditTemplateModal.tsx`.
+5. Tahap 5: Pembaharuan Antarmuka Dashboard Bot Tenant (`frontend`):
+   - Perbarui `useStoreConfig.ts` untuk state, initial load, dan sync server konfigurasi baru.
+   - Perbarui `TemplatePickerModal.tsx` agar mendukung kategori-kategori baru.
+   - Tambahkan sub-tabs terorganisir di `TabCommand.tsx` ('Transaksi', 'Notifikasi', 'Kontak') dengan tombol 'Pilih Template', chip tag placeholder, dan tombol Simpan.
+6. Tahap 6: Verifikasi & Dokumentasi:
+   - Jalankan `compile_applet` dan `lint_applet`.
+   - Pastikan bebas em-dash (-) dan en-dash (-).
+   - Catat hasil implementasi di `brain/PROGRESS.md`.
+
+Hasil yang Diharapkan:
+Seluruh respon pesan bot dapat dikustomisasi 100% oleh masing-masing tenant, Master Admin dapat menyediakan template bawaan berkualitas tinggi untuk tiap kategori, dan setiap pesan kaya akan placeholder dinamis yang akurat.

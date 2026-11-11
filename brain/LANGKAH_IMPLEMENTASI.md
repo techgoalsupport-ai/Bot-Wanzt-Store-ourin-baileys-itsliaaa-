@@ -2239,3 +2239,87 @@ Rencana Pengujian:
 2. Hapus angka pada input durasi.
 3. Pastikan angka terhapus (kolom kosong) dan muncul pesan "Form Tersebut Wajib Di Isi, Misal : 1".
 4. Masukkan angka baru dan pastikan pesan peringatan hilang.
+
+---
+
+[50.0] - IMPLEMENTASI KUSTOMISASI LENGKAP RESPON BOT: TEMPLATE MASTER & BOT, KATEGORI BARU, DAN PLACEHOLDER DINAMIS
+
+- Tanggal: 2026-11-10 12:57
+- Status: Completed
+Referensi SCHEDULE: 30.0
+
+Tujuan Implementasi:
+Mengganti seluruh pesan respon bot yang sebelumnya hardcoded menjadi pesan dinamis yang dapat dikustomisasi, menambahkan dukungan template di Master Admin dan Dashboard Bot untuk masing-masing kategori secara terisolasi (anti-campur), menyediakan placeholder dinamis yang relevan, serta memberikan penjelasan lengkap kegunaan tiap placeholder.
+
+Bagian yang Akan Diubah:
+1. "backend/types/bot.types.ts" - Memperluas interface CommandsConfig dengan field template pesan baru.
+2. "backend/services/placeholderHelper.ts" - Menambahkan pemrosesan placeholder dinamis baru.
+3. "backend/config/configManager.ts" - Default template baru dan fungsi load/save ke tabel commands_config di SQLite per-tenant.
+4. "admin-backend/types/admin.types.ts" - Memperluas union TemplateCategory dengan 11 kategori baru.
+5. "admin-backend/services/templateService.ts" - Dukungan kategori baru pada service template master.
+6. "admin-backend/database/masterSqlite.ts" - Auto-seeding 11 template bawaan untuk kategori baru.
+7. "backend/handlers/messageDispatcher.ts" - Mengganti pesan hardcoded (payment success DM & grup, payment expired, gateway error, order group notif, out of stock, checkout session expired, promo cancel) dengan pemanggilan template kustom & placeholder.
+8. "backend/messages/carouselMessage.ts" - Mengganti pesan stok kosong dengan template kustom.
+9. "backend/messages/adminContactMessage.ts" - Mengganti pesan kontak owner dan admin belum diatur dengan template kustom.
+10. "backend/services/expiryWarningService.ts" - Mengganti teks pengingat sewa bot dengan template kustom / template master.
+11. "admin-frontend/src/types/admin.types.ts" - Sinkronisasi union TemplateCategory.
+12. "admin-frontend/src/components/dashboard/tabs/TabTemplates.tsx" - Filter pill dan badge visual untuk seluruh kategori baru.
+13. "admin-frontend/src/components/modals/AddEditTemplateModal.tsx" - Pilihan kategori baru, label fungsi, dan chip placeholder yang relevan.
+14. "frontend/src/types/dashboard.types.ts" - Memperluas interface CommandsConfig.
+15. "frontend/src/hooks/useStoreConfig.ts" - State, loadInitialConfig, dan syncConfigToServer untuk field-field baru.
+16. "frontend/src/components/modals/TemplatePickerModal.tsx" - Update union BotCommandCategory dan pemetaan kategori.
+17. "frontend/src/components/tabs/TabCommand.tsx" - Sub-tabs baru (Transaksi, Notifikasi, Kontak) dengan form textarea, chip placeholder, tombol Pilih Template, dan tombol Simpan.
+
+Alasan Perubahan:
+Pengguna meminta semua respon pesan bot yang sebelumnya belum disertakan agar dimasukkan ke sistem kustomisasi, dapat diedit dan dipilih template-nya di Dashboard Bot maupun Master Admin, dikelompokkan dalam kategori yang sesuai, dan dilengkapi dengan placeholder dinamis beserta penjelasannya.
+
+Strategi Implementasi:
+1. Skema & Model Data:
+   Tambahkan properti berikut ke CommandsConfig:
+   - paymentSuccessDmText, paymentSuccessDmFooter
+   - paymentSuccessGroupText
+   - paymentExpiredText
+   - paymentErrorText
+   - orderGroupNotifText
+   - stockEmptyText
+   - sessionExpiredText
+   - promoCancelledText
+   - contactOwnerEmptyText
+   - contactAdminEmptyText
+   - expiryWarningOwnerText, expiryWarningOwnerFooter
+2. Engine Placeholder:
+   Perluas resolvePlaceholders agar mendukung:
+   - {customerName} / {senderName}: Nama profil WhatsApp pembeli
+   - {customerNumber} / {senderNumber}: Nomor WhatsApp pembeli
+   - {orderId}: ID transaksi pesanan
+   - {produkName} / {productName}: Nama produk
+   - {varian} / {variant}: Nama varian produk
+   - {price}: Harga dasar varian
+   - {total} / {totalPrice}: Total bayar
+   - {reason} / {errorMessage}: Keterangan kendala / penolakan
+   - {tenantId}: ID unit bot
+   - {remainingTime} / {sisaWaktu}: Sisa durasi masa sewa bot
+   - {expiryDate} / {waktuKedaluwarsa}: Tanggal kedaluwarsa lengkap
+3. Handler Bot:
+   Gantikan string hardcode dengan pengambilan template dari config dan format menggunakan resolvePlaceholders.
+4. UI Master & Tenant:
+   - Di Master: Kelola template untuk 11 kategori baru.
+   - Di Bot: Sediakan sub-tab terorganisir agar form tidak menumpuk, setiap form memiliki tombol Pilih Template yang tersaring ketat sesuai kategorinya (anti-campur).
+
+Urutan Pengerjaan:
+1. Update backend types, placeholderHelper, configManager.
+2. Update admin-backend types, templateService, masterSqlite seed data.
+3. Update bot message handlers (messageDispatcher, carouselMessage, adminContactMessage, expiryWarningService).
+4. Update admin-frontend types, TabTemplates, AddEditTemplateModal.
+5. Update frontend types, useStoreConfig, TemplatePickerModal, TabCommand.
+6. Compile & lint verification.
+7. Update progress dan schedule di brain/.
+
+Dampak Perubahan:
+Seluruh respon pesan bot dapat dipersonalisasi oleh tenant sesuai branding toko mereka, dengan template default yang siap dipakai dan sistem yang terisolasi rapi.
+
+Rencana Pengujian:
+1. Verifikasi kompilasi dan linting TypeScript (compile_applet dan lint_applet).
+2. Verifikasi seluruh template kategori baru muncul di TabTemplates Master Admin.
+3. Verifikasi tombol Pilih Template di TabCommand Bot Dashboard membuka template yang sesuai kategori.
+4. Verifikasi penggantian variabel placeholder dinamis berjalan akurat.

@@ -204,3 +204,43 @@ export const detectSmmPlatform = (categoryName: string = '', serviceName: string
   if (combined.includes('spotify') || combined.includes('soundcloud') || combined.includes('music') || combined.includes('musik')) return 'Layanan Musik';
   return 'Layanan Lainnya';
 };
+
+export interface CommandsConfig {
+  menuOutputText?: string;
+  menuFooterText?: string;
+  listOutputText?: string;
+  listFooterText?: string;
+  carouselOutputText?: string;
+  carouselFooterText?: string;
+  invoiceOutputText?: string;
+  invoiceFooterText?: string;
+  confirmSummaryText?: string;
+  confirmInputPromoText?: string;
+  confirmPromoSuccessText?: string;
+  confirmPromoInvalidText?: string;
+  confirmFooterText?: string;
+  // Transaksi
+  paymentSuccessDmText?: string;
+  paymentSuccessDmFooter?: string;
+  paymentSuccessGroupText?: string;
+  paymentSuccessGroupFooter?: string;
+  paymentExpiredText?: string;
+  paymentExpiredFooter?: string;
+  paymentErrorText?: string;
+  paymentErrorFooter?: string;
+  // Notifikasi
+  orderGroupNotifText?: string;
+  orderGroupNotifFooter?: string;
+  stockEmptyText?: string;
+  stockEmptyFooter?: string;
+  sessionExpiredText?: string;
+  sessionExpiredFooter?: string;
+  promoCancelledText?: string;
+  promoCancelledFooter?: string;
+  // Kontak & Peringatan
+  contactOwnerEmptyText?: string;
+  contactAdminEmptyText?: string;
+  expiryWarningOwnerText?: string;
+  expiryWarningOwnerFooter?: string;
+}
+

@@ -16,6 +16,14 @@ import {
   DEFAULT_CONFIRM_INPUT_PROMO_TEMPLATE,
   DEFAULT_CONFIRM_PROMO_SUCCESS_TEMPLATE,
   DEFAULT_CONFIRM_PROMO_INVALID_TEMPLATE,
+  DEFAULT_PAYMENT_SUCCESS_DM_TEMPLATE,
+  DEFAULT_PAYMENT_SUCCESS_GROUP_TEMPLATE,
+  DEFAULT_PAYMENT_EXPIRED_TEMPLATE,
+  DEFAULT_PAYMENT_ERROR_TEMPLATE,
+  DEFAULT_ORDER_GROUP_NOTIF_TEMPLATE,
+  DEFAULT_STOCK_EMPTY_TEMPLATE,
+  DEFAULT_SESSION_EXPIRED_TEMPLATE,
+  DEFAULT_PROMO_CANCELLED_TEMPLATE,
 } from '../config/configManager.ts';
 import { getPricingConfig, validateAndApplyPromo, db } from '../database/sqlite.ts';
 import QRCode from 'qrcode';
@@ -103,7 +111,17 @@ export async function executeLunasQrisInvoice(params: ExecuteInvoiceParams): Pro
 
   if (!lunasKey) {
     deps.addLog('error', '❌ API Key LunasQRIS belum diisi. Gagal menerbitkan QRIS otomatis.');
-    const errorMsg = '⚠️ Maaf kak, metode pembayaran otomatis QRIS belum dapat digunakan saat ini. Silakan hubungi admin toko kami.';
+    const errorTpl = config.paymentErrorText || DEFAULT_PAYMENT_ERROR_TEMPLATE;
+    const errorMsg = resolvePlaceholders(errorTpl, config, {
+      name: productName,
+      variant: variantName,
+      orderId,
+      price: effectiveAmount,
+      total: effectiveAmount,
+      customerName: senderName,
+      customerNumber: senderCleanNumber,
+      errorMessage: 'Metode pembayaran otomatis QRIS belum dapat digunakan saat ini. API Key belum diatur.',
+    });
     try {
       const errRes = await sock.sendMessage(senderJid, { text: errorMsg });
       markMessageAsBotSent(errRes?.key?.id);
@@ -128,7 +146,17 @@ export async function executeLunasQrisInvoice(params: ExecuteInvoiceParams): Pro
     trxData = lunasRes.data;
   } catch (apiErr: any) {
     deps.addLog('error', `❌ Gagal membuat transaksi LunasQRIS: ${apiErr?.message || apiErr}`);
-    const failMsg = `⚠️ Terjadi kendala saat menerbitkan kode QRIS: ${apiErr?.message || 'Gagal terhubung ke gateway pembayaran'}. Silakan coba beberapa saat lagi atau hubungi admin.`;
+    const errorTpl = config.paymentErrorText || DEFAULT_PAYMENT_ERROR_TEMPLATE;
+    const failMsg = resolvePlaceholders(errorTpl, config, {
+      name: productName,
+      variant: variantName,
+      orderId,
+      price: effectiveAmount,
+      total: effectiveAmount,
+      customerName: senderName,
+      customerNumber: senderCleanNumber,
+      errorMessage: apiErr?.message || 'Gagal terhubung ke gateway pembayaran',
+    });
     try {
       const failRes = await sock.sendMessage(senderJid, { text: failMsg });
       markMessageAsBotSent(failRes?.key?.id);
@@ -183,7 +211,16 @@ export async function executeLunasQrisInvoice(params: ExecuteInvoiceParams): Pro
           }
         }
 
-        const paidMsg = `🎉 *PEMBAYARAN DITERIMA & LUNAS!*\n\nTerima kasih Kak *${senderName}*, pembayaran untuk pesanan *${productName} (${variantName})* sebesar *Rp ${trxData.total_amount.toLocaleString('id-ID')}* telah diverifikasi lunas oleh sistem LunasQRIS.\n\nPesanan Anda akan segera diproses oleh sistem atau admin kami.`;
+        const paidTpl = config.paymentSuccessDmText || DEFAULT_PAYMENT_SUCCESS_DM_TEMPLATE;
+        const paidMsg = resolvePlaceholders(paidTpl, config, {
+          name: productName,
+          variant: variantName,
+          orderId,
+          price: trxData.total_amount,
+          total: trxData.total_amount,
+          customerName: senderName,
+          customerNumber: senderCleanNumber,
+        });
         try {
           const pRes = await sock.sendMessage(senderJid, { text: paidMsg });
           markMessageAsBotSent(pRes?.key?.id);
@@ -191,7 +228,16 @@ export async function executeLunasQrisInvoice(params: ExecuteInvoiceParams): Pro
 
         if (isGroup && remoteJid) {
           try {
-            const grpPaid = `✅ Pembayaran untuk *${productName} (${variantName})* oleh @${senderCleanNumber} telah *LUNAS*! Pesanan sedang diproses.`;
+            const grpPaidTpl = config.paymentSuccessGroupText || DEFAULT_PAYMENT_SUCCESS_GROUP_TEMPLATE;
+            const grpPaid = resolvePlaceholders(grpPaidTpl, config, {
+              name: productName,
+              variant: variantName,
+              orderId,
+              price: trxData.total_amount,
+              total: trxData.total_amount,
+              customerName: senderName,
+              customerNumber: senderCleanNumber,
+            });
             const grpRes = await sock.sendMessage(remoteJid, { text: grpPaid, mentions: [senderJid] });
             markMessageAsBotSent(grpRes?.key?.id);
           } catch {}
@@ -202,7 +248,16 @@ export async function executeLunasQrisInvoice(params: ExecuteInvoiceParams): Pro
           updateTransactionStatus(orderId, 'cancel');
         } catch {}
         try {
-          const expMsg = `⏰ Waktu pembayaran pesanan *${productName} (${variantName})* (Order: ${orderId}) telah berakhir atau dibatalkan. Silakan pesan kembali jika masih berminat.`;
+          const expTpl = config.paymentExpiredText || DEFAULT_PAYMENT_EXPIRED_TEMPLATE;
+          const expMsg = resolvePlaceholders(expTpl, config, {
+            name: productName,
+            variant: variantName,
+            orderId,
+            price: effectiveAmount,
+            total: effectiveAmount,
+            customerName: senderName,
+            customerNumber: senderCleanNumber,
+          });
           const eRes = await sock.sendMessage(senderJid, { text: expMsg });
           markMessageAsBotSent(eRes?.key?.id);
         } catch {}
@@ -521,8 +576,15 @@ export async function dispatchIncomingMessages(
       try {
         const xavieraBal = await checkXavieraBalance(costPrice, config);
         if (!xavieraBal.sufficient) {
-          deps.addLog('warning', `⚠️ Saldo Xaviera tidak mencukupi untuk order ${productName} (Saldo: ${xavieraBal.currentBalance}, Butuh Modal: ${costPrice})`);
-          const outOfStockMsg = `Maaf kak @${senderCleanNumber}, saat ini stok atau saldo produk *${productName} (${variantName})* sedang dalam proses restock oleh supplier. Silakan coba kembali nanti atau hubungi admin.`;
+          const stockTpl = config.stockEmptyText || DEFAULT_STOCK_EMPTY_TEMPLATE;
+          const outOfStockMsg = resolvePlaceholders(stockTpl, config, {
+            name: productName,
+            variant: variantName,
+            price,
+            total: price,
+            customerName: senderName,
+            customerNumber: senderCleanNumber,
+          });
           const resp = await sock.sendMessage(
             remoteJid,
             { text: outOfStockMsg, mentions: [senderJid] },
@@ -555,7 +617,15 @@ export async function dispatchIncomingMessages(
 
       // 3. Jika di Grup: Kirim notifikasi singkat bahwa konfirmasi pesanan dikirim ke DM
       if (isGroup) {
-        const groupNotification = `Halo @${senderCleanNumber}, rincian pesanan untuk *${productName} (${variantName})* telah kami kirimkan ke *chat pribadi (DM)* Anda. 💬\n\nSilakan buka chat pribadi untuk memilih menggunakan kupon promo atau langsung melanjutkan pembayaran.`;
+        const grpNotifTpl = config.orderGroupNotifText || DEFAULT_ORDER_GROUP_NOTIF_TEMPLATE;
+        const groupNotification = resolvePlaceholders(grpNotifTpl, config, {
+          name: productName,
+          variant: variantName,
+          price,
+          total: price,
+          customerName: senderName,
+          customerNumber: senderCleanNumber,
+        });
         try {
           const grpRes = await sock.sendMessage(
             remoteJid,
@@ -642,8 +712,15 @@ export async function dispatchIncomingMessages(
       const session = activeCheckoutSessions.get(senderJid);
       if (!session || Date.now() > session.expiresAt) {
         activeCheckoutSessions.delete(senderJid);
+        const sessExpTpl = config.sessionExpiredText || DEFAULT_SESSION_EXPIRED_TEMPLATE;
+        const expText = resolvePlaceholders(sessExpTpl, config, {
+          name: session?.productName,
+          variant: session?.variantName,
+          customerName: senderName,
+          customerNumber: (senderJid.split('@')[0] || '').replace(/[^0-9]/g, ''),
+        });
         const expRes = await sock.sendMessage(senderJid, {
-          text: '⏰ Sesi pesanan Anda telah berakhir. Silakan pilih varian kembali di grup atau katalog toko.',
+          text: expText,
         });
         markMessageAsBotSent(expRes?.key?.id);
         continue;
@@ -695,8 +772,15 @@ export async function dispatchIncomingMessages(
       const session = activeCheckoutSessions.get(senderJid);
       if (!session || Date.now() > session.expiresAt) {
         activeCheckoutSessions.delete(senderJid);
+        const sessExpTpl = config.sessionExpiredText || DEFAULT_SESSION_EXPIRED_TEMPLATE;
+        const expText = resolvePlaceholders(sessExpTpl, config, {
+          name: session?.productName,
+          variant: session?.variantName,
+          customerName: senderName,
+          customerNumber: (senderJid.split('@')[0] || '').replace(/[^0-9]/g, ''),
+        });
         const expRes = await sock.sendMessage(senderJid, {
-          text: '⏰ Sesi pesanan Anda telah berakhir. Silakan pilih varian kembali di grup atau katalog toko.',
+          text: expText,
         });
         markMessageAsBotSent(expRes?.key?.id);
         continue;
@@ -961,8 +1045,17 @@ export async function dispatchIncomingMessages(
       if (activeSession.waitingForPromo) {
         if (Date.now() > activeSession.expiresAt) {
           activeCheckoutSessions.delete(senderJid);
+          const sessExpTpl = config.sessionExpiredText || DEFAULT_SESSION_EXPIRED_TEMPLATE;
+          const expText = resolvePlaceholders(sessExpTpl, config, {
+            name: activeSession.productName,
+            variant: activeSession.variantName,
+            price: activeSession.price,
+            total: activeSession.price,
+            customerName: activeSession.senderName,
+            customerNumber: activeSession.senderCleanNumber,
+          });
           const expRes = await sock.sendMessage(senderJid, {
-            text: '⏰ Sesi kode promo Anda telah berakhir (melebihi 90 detik). Silakan pilih varian kembali di katalog toko.',
+            text: expText,
           });
           markMessageAsBotSent(expRes?.key?.id);
           continue;
@@ -974,7 +1067,15 @@ export async function dispatchIncomingMessages(
         if (inputUpper === 'BATAL') {
           activeCheckoutSessions.delete(senderJid);
           deps.addLog('info', `❌ Pelanggan ${senderName} mengetik BATAL untuk promo. Melanjutkan dengan harga normal.`);
-          const cancelMsg = `Penggunaan kode promo dibatalkan. Menyiapkan invoice LunasQRIS dengan harga normal (Rp ${activeSession.price.toLocaleString('id-ID')})...`;
+          const promoCancelTpl = config.promoCancelledText || DEFAULT_PROMO_CANCELLED_TEMPLATE;
+          const cancelMsg = resolvePlaceholders(promoCancelTpl, config, {
+            name: activeSession.productName,
+            variant: activeSession.variantName,
+            price: activeSession.price,
+            total: activeSession.price,
+            customerName: activeSession.senderName,
+            customerNumber: activeSession.senderCleanNumber,
+          });
           const cRes = await sock.sendMessage(senderJid, { text: cancelMsg });
           markMessageAsBotSent(cRes?.key?.id);
 

@@ -9,6 +9,17 @@ export type TemplateCategory =
   | 'confirm_promo_input'
   | 'confirm_promo_valid'
   | 'confirm_promo_invalid'
+  | 'payment_success_dm'
+  | 'payment_success_group'
+  | 'payment_expired'
+  | 'payment_error'
+  | 'order_group_notif'
+  | 'stock_empty'
+  | 'checkout_session_expired'
+  | 'promo_cancelled'
+  | 'contact_owner_empty'
+  | 'contact_admin_empty'
+  | 'expiry_warning_owner'
   | 'confirmation';
 
 export interface MessageTemplateRecord {

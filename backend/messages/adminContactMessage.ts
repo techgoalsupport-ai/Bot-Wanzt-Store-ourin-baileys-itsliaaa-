@@ -1,5 +1,6 @@
 import { CommandsConfig } from '../types/bot.types.ts';
 import { resolvePlaceholders, normalizeIndonesianPhone } from '../services/placeholderHelper.ts';
+import { DEFAULT_CONTACT_OWNER_EMPTY_TEMPLATE, DEFAULT_CONTACT_ADMIN_EMPTY_TEMPLATE } from '../config/configManager.ts';
 
 /**
  * Mengirimkan vCard kontak Owner Toko dari data Store Info
@@ -26,9 +27,11 @@ export async function sendOwnerContactMessage(
 
   if (!cleanNumber) {
     try {
+      const ownerEmptyTpl = config.contactOwnerEmptyText || DEFAULT_CONTACT_OWNER_EMPTY_TEMPLATE;
+      const ownerEmptyMsg = resolvePlaceholders(ownerEmptyTpl, config);
       await sock.sendMessage(
         remoteJid,
-        { text: 'Informasi tentang owner belum di set pada toko ini' },
+        { text: ownerEmptyMsg },
         quotedMsg ? { quoted: quotedMsg } : undefined
       );
       if (addLog) {
@@ -91,13 +94,15 @@ export async function sendAdminContactMessage(
   // Pengecekan form opsional admin: jika form kosong / belum diatur
   if (!cleanNumber) {
     try {
+      const adminEmptyTpl = config.contactAdminEmptyText || DEFAULT_CONTACT_ADMIN_EMPTY_TEMPLATE;
+      const adminEmptyMsg = resolvePlaceholders(adminEmptyTpl, config);
       await sock.sendMessage(
         remoteJid,
-        { text: 'Informasi tentang admin belum di set pada toko ini' },
+        { text: adminEmptyMsg },
         quotedMsg ? { quoted: quotedMsg } : undefined
       );
       if (addLog) {
-        addLog('info', `ℹ️ Form admin belum di-set. Mengirimkan pesan: "Informasi tentang admin belum di set pada toko ini" ke ${remoteJid}`);
+        addLog('info', `ℹ️ Form admin belum di-set. Mengirimkan pesan status admin ke ${remoteJid}`);
       }
     } catch (err: any) {
       if (addLog) {

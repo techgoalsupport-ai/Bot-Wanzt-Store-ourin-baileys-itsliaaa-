@@ -126,6 +126,29 @@ export interface CommandsConfig {
   confirmPromoSuccessText?: string;
   confirmPromoInvalidText?: string;
   confirmFooterText?: string;
+  // Respon Transaksi (Status Bayar)
+  paymentSuccessDmText?: string;
+  paymentSuccessDmFooter?: string;
+  paymentSuccessGroupText?: string;
+  paymentSuccessGroupFooter?: string;
+  paymentExpiredText?: string;
+  paymentExpiredFooter?: string;
+  paymentErrorText?: string;
+  paymentErrorFooter?: string;
+  // Respon Notifikasi Alur Pesanan
+  orderGroupNotifText?: string;
+  orderGroupNotifFooter?: string;
+  stockEmptyText?: string;
+  stockEmptyFooter?: string;
+  sessionExpiredText?: string;
+  sessionExpiredFooter?: string;
+  promoCancelledText?: string;
+  promoCancelledFooter?: string;
+  // Respon Kontak & Pengingat Status
+  contactOwnerEmptyText?: string;
+  contactAdminEmptyText?: string;
+  expiryWarningOwnerText?: string;
+  expiryWarningOwnerFooter?: string;
   xavieraApiKey?: string;
   xavieraBaseUrl?: string;
   lunasQrisApiKey?: string;

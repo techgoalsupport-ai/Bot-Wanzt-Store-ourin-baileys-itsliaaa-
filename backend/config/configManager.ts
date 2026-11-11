@@ -117,6 +117,46 @@ export const DEFAULT_CONFIRMATION_CONFIG: ConfirmationCommandConfig = {
   confirmFooterText: '{storeName} • Konfirmasi Pesanan',
 };
 
+// --- Default Templates Respon Transaksi, Notifikasi & Kontak Baru ---
+export const DEFAULT_PAYMENT_SUCCESS_DM_TEMPLATE = `🎉 *PEMBAYARAN DITERIMA & LUNAS!*
+
+Terima kasih Kak *{customerName}*, pembayaran untuk pesanan *{produkName} ({varian})* sebesar *Rp {total}* (Order ID: #{orderId}) telah diverifikasi lunas oleh sistem LunasQRIS.
+
+Pesanan Anda akan segera diproses oleh sistem atau admin kami.`;
+
+export const DEFAULT_PAYMENT_SUCCESS_GROUP_TEMPLATE = `✅ Pembayaran untuk *{produkName} ({varian})* oleh @{customerNumber} telah *LUNAS*! Pesanan sedang diproses.`;
+
+export const DEFAULT_PAYMENT_EXPIRED_TEMPLATE = `⏰ Waktu pembayaran pesanan *{produkName} ({varian})* (Order: #{orderId}) telah berakhir atau dibatalkan. Silakan pesan kembali jika masih berminat.`;
+
+export const DEFAULT_PAYMENT_ERROR_TEMPLATE = `⚠️ Terjadi kendala saat menerbitkan kode QRIS: {errorMessage}. Silakan coba beberapa saat lagi atau hubungi admin toko.`;
+
+export const DEFAULT_ORDER_GROUP_NOTIF_TEMPLATE = `Halo @{customerNumber}, rincian pesanan untuk *{produkName} ({varian})* telah kami kirimkan ke *chat pribadi (DM)* Anda. 💬
+
+Silakan buka chat pribadi untuk memilih menggunakan kupon promo atau langsung melanjutkan pembayaran.`;
+
+export const DEFAULT_STOCK_EMPTY_TEMPLATE = `Maaf kak @{customerNumber}, saat ini stok atau saldo produk *{produkName} ({varian})* sedang dalam proses restock oleh supplier. Silakan coba kembali nanti atau hubungi admin.`;
+
+export const DEFAULT_SESSION_EXPIRED_TEMPLATE = `⏰ Sesi pesanan Anda telah berakhir (melebihi batas waktu). Silakan pilih varian kembali di grup atau katalog toko {storeName}.`;
+
+export const DEFAULT_PROMO_CANCELLED_TEMPLATE = `Penggunaan kode promo dibatalkan. Menyiapkan invoice pembayaran QRIS dengan harga normal (Rp {price})...`;
+
+export const DEFAULT_CONTACT_OWNER_EMPTY_TEMPLATE = `Informasi tentang owner belum di set pada toko ini`;
+
+export const DEFAULT_CONTACT_ADMIN_EMPTY_TEMPLATE = `Informasi tentang admin belum di set pada toko ini`;
+
+export const DEFAULT_EXPIRY_WARNING_OWNER_TEMPLATE = `⚠️ *PERINGATAN MASA SEWA BOT WHATSAPP*
+
+Halo kak *{ownerName}* (*{storeName}*),
+Masa aktif sewa bot WhatsApp toko Anda akan segera berakhir dalam *{remainingTime}*.
+
+📋 *Rincian Unit Bot:*
+• Nama Toko: *{storeName}*
+• ID Unit: \`{tenantId}\`
+• Sisa Waktu: *{remainingTime}*
+• Waktu Kedaluwarsa: *{expiryDate} WIB*
+
+Agar operasional pesanan otomatis dan transaksi pelanggan di WhatsApp tidak terputus, silakan lakukan perpanjangan masa sewa ke Master Admin sebelum batas waktu berakhir.`;
+
 export const DEFAULT_API_CONFIG: ApiConfig = {
   xavieraApiKey: '',
   xavieraBaseUrl: 'https://xavierastore.com/api/v1',
@@ -132,6 +172,26 @@ export const DEFAULT_CONFIG: CommandsConfig = {
   ...DEFAULT_CAROUSEL_CONFIG,
   ...DEFAULT_INVOICE_CONFIG,
   ...DEFAULT_CONFIRMATION_CONFIG,
+  paymentSuccessDmText: DEFAULT_PAYMENT_SUCCESS_DM_TEMPLATE,
+  paymentSuccessDmFooter: '{storeName} • Pembayaran Terverifikasi',
+  paymentSuccessGroupText: DEFAULT_PAYMENT_SUCCESS_GROUP_TEMPLATE,
+  paymentSuccessGroupFooter: '',
+  paymentExpiredText: DEFAULT_PAYMENT_EXPIRED_TEMPLATE,
+  paymentExpiredFooter: '{storeName} • Invoice Kedaluwarsa',
+  paymentErrorText: DEFAULT_PAYMENT_ERROR_TEMPLATE,
+  paymentErrorFooter: '{storeName} • Layanan Pelanggan',
+  orderGroupNotifText: DEFAULT_ORDER_GROUP_NOTIF_TEMPLATE,
+  orderGroupNotifFooter: '{storeName} • Pesanan WhatsApp',
+  stockEmptyText: DEFAULT_STOCK_EMPTY_TEMPLATE,
+  stockEmptyFooter: '{storeName} • Status Stok',
+  sessionExpiredText: DEFAULT_SESSION_EXPIRED_TEMPLATE,
+  sessionExpiredFooter: '{storeName} • Sesi Berakhir',
+  promoCancelledText: DEFAULT_PROMO_CANCELLED_TEMPLATE,
+  promoCancelledFooter: '{storeName} • Info Kupon',
+  contactOwnerEmptyText: DEFAULT_CONTACT_OWNER_EMPTY_TEMPLATE,
+  contactAdminEmptyText: DEFAULT_CONTACT_ADMIN_EMPTY_TEMPLATE,
+  expiryWarningOwnerText: DEFAULT_EXPIRY_WARNING_OWNER_TEMPLATE,
+  expiryWarningOwnerFooter: '{storeName} Official • Notifikasi Otomatis',
   ...DEFAULT_API_CONFIG,
 };
 
@@ -352,6 +412,113 @@ export function saveConfirmationConfig(update: Partial<ConfirmationCommandConfig
   return merged;
 }
 
+export function loadTransactionStatusConfig() {
+  const defaults = {
+    paymentSuccessDmText: DEFAULT_PAYMENT_SUCCESS_DM_TEMPLATE,
+    paymentSuccessDmFooter: '{storeName} • Pembayaran Terverifikasi',
+    paymentSuccessGroupText: DEFAULT_PAYMENT_SUCCESS_GROUP_TEMPLATE,
+    paymentSuccessGroupFooter: '',
+    paymentExpiredText: DEFAULT_PAYMENT_EXPIRED_TEMPLATE,
+    paymentExpiredFooter: '{storeName} • Invoice Kedaluwarsa',
+    paymentErrorText: DEFAULT_PAYMENT_ERROR_TEMPLATE,
+    paymentErrorFooter: '{storeName} • Layanan Pelanggan',
+  };
+  try {
+    const row = db.prepare('SELECT config_data FROM commands_config WHERE command_type = ?').get('transaction_status') as any;
+    if (row && row.config_data) {
+      return { ...defaults, ...JSON.parse(row.config_data) };
+    }
+  } catch (err) {
+    console.error('Gagal membaca transaction_status config dari SQLite:', err);
+  }
+  return defaults;
+}
+
+export function saveTransactionStatusConfig(update: any) {
+  const current = loadTransactionStatusConfig();
+  const merged = { ...current, ...update };
+  const now = new Date().toISOString();
+  try {
+    db.prepare(`
+      INSERT OR REPLACE INTO commands_config (command_type, config_data, updated_at)
+      VALUES (?, ?, ?)
+    `).run('transaction_status', JSON.stringify(merged), now);
+  } catch (err) {
+    console.error('Gagal menyimpan transaction_status config ke SQLite:', err);
+  }
+  return merged;
+}
+
+export function loadNotificationFlowConfig() {
+  const defaults = {
+    orderGroupNotifText: DEFAULT_ORDER_GROUP_NOTIF_TEMPLATE,
+    orderGroupNotifFooter: '{storeName} • Pesanan WhatsApp',
+    stockEmptyText: DEFAULT_STOCK_EMPTY_TEMPLATE,
+    stockEmptyFooter: '{storeName} • Status Stok',
+    sessionExpiredText: DEFAULT_SESSION_EXPIRED_TEMPLATE,
+    sessionExpiredFooter: '{storeName} • Sesi Berakhir',
+    promoCancelledText: DEFAULT_PROMO_CANCELLED_TEMPLATE,
+    promoCancelledFooter: '{storeName} • Info Kupon',
+  };
+  try {
+    const row = db.prepare('SELECT config_data FROM commands_config WHERE command_type = ?').get('notification_flow') as any;
+    if (row && row.config_data) {
+      return { ...defaults, ...JSON.parse(row.config_data) };
+    }
+  } catch (err) {
+    console.error('Gagal membaca notification_flow config dari SQLite:', err);
+  }
+  return defaults;
+}
+
+export function saveNotificationFlowConfig(update: any) {
+  const current = loadNotificationFlowConfig();
+  const merged = { ...current, ...update };
+  const now = new Date().toISOString();
+  try {
+    db.prepare(`
+      INSERT OR REPLACE INTO commands_config (command_type, config_data, updated_at)
+      VALUES (?, ?, ?)
+    `).run('notification_flow', JSON.stringify(merged), now);
+  } catch (err) {
+    console.error('Gagal menyimpan notification_flow config ke SQLite:', err);
+  }
+  return merged;
+}
+
+export function loadContactStatusConfig() {
+  const defaults = {
+    contactOwnerEmptyText: DEFAULT_CONTACT_OWNER_EMPTY_TEMPLATE,
+    contactAdminEmptyText: DEFAULT_CONTACT_ADMIN_EMPTY_TEMPLATE,
+    expiryWarningOwnerText: DEFAULT_EXPIRY_WARNING_OWNER_TEMPLATE,
+    expiryWarningOwnerFooter: '{storeName} Official • Notifikasi Otomatis',
+  };
+  try {
+    const row = db.prepare('SELECT config_data FROM commands_config WHERE command_type = ?').get('contact_status') as any;
+    if (row && row.config_data) {
+      return { ...defaults, ...JSON.parse(row.config_data) };
+    }
+  } catch (err) {
+    console.error('Gagal membaca contact_status config dari SQLite:', err);
+  }
+  return defaults;
+}
+
+export function saveContactStatusConfig(update: any) {
+  const current = loadContactStatusConfig();
+  const merged = { ...current, ...update };
+  const now = new Date().toISOString();
+  try {
+    db.prepare(`
+      INSERT OR REPLACE INTO commands_config (command_type, config_data, updated_at)
+      VALUES (?, ?, ?)
+    `).run('contact_status', JSON.stringify(merged), now);
+  } catch (err) {
+    console.error('Gagal menyimpan contact_status config ke SQLite:', err);
+  }
+  return merged;
+}
+
 export function loadApiConfig(): ApiConfig {
   try {
     const row = db.prepare('SELECT * FROM api_config WHERE id = 1').get() as any;
@@ -407,6 +574,9 @@ export function loadCommandsConfig(): CommandsConfig {
   const carousel = loadCarouselConfig();
   const invoice = loadInvoiceConfig();
   const confirm = loadConfirmationConfig();
+  const txStatus = loadTransactionStatusConfig();
+  const notifFlow = loadNotificationFlowConfig();
+  const contactStatus = loadContactStatusConfig();
   const api = loadApiConfig();
 
   return {
@@ -432,6 +602,29 @@ export function loadCommandsConfig(): CommandsConfig {
     confirmPromoSuccessText: confirm.confirmPromoSuccessText,
     confirmPromoInvalidText: confirm.confirmPromoInvalidText,
     confirmFooterText: confirm.confirmFooterText,
+    // Respon Transaksi
+    paymentSuccessDmText: txStatus.paymentSuccessDmText,
+    paymentSuccessDmFooter: txStatus.paymentSuccessDmFooter,
+    paymentSuccessGroupText: txStatus.paymentSuccessGroupText,
+    paymentSuccessGroupFooter: txStatus.paymentSuccessGroupFooter,
+    paymentExpiredText: txStatus.paymentExpiredText,
+    paymentExpiredFooter: txStatus.paymentExpiredFooter,
+    paymentErrorText: txStatus.paymentErrorText,
+    paymentErrorFooter: txStatus.paymentErrorFooter,
+    // Respon Notifikasi Alur Pesanan
+    orderGroupNotifText: notifFlow.orderGroupNotifText,
+    orderGroupNotifFooter: notifFlow.orderGroupNotifFooter,
+    stockEmptyText: notifFlow.stockEmptyText,
+    stockEmptyFooter: notifFlow.stockEmptyFooter,
+    sessionExpiredText: notifFlow.sessionExpiredText,
+    sessionExpiredFooter: notifFlow.sessionExpiredFooter,
+    promoCancelledText: notifFlow.promoCancelledText,
+    promoCancelledFooter: notifFlow.promoCancelledFooter,
+    // Respon Kontak & Pengingat Status
+    contactOwnerEmptyText: contactStatus.contactOwnerEmptyText,
+    contactAdminEmptyText: contactStatus.contactAdminEmptyText,
+    expiryWarningOwnerText: contactStatus.expiryWarningOwnerText,
+    expiryWarningOwnerFooter: contactStatus.expiryWarningOwnerFooter,
     xavieraApiKey: api.xavieraApiKey,
     xavieraBaseUrl: api.xavieraBaseUrl,
     lunasQrisApiKey: api.lunasQrisApiKey !== undefined ? api.lunasQrisApiKey : DEFAULT_API_CONFIG.lunasQrisApiKey,
@@ -510,6 +703,64 @@ export function saveCommandsConfig(
       ...(newConfig.confirmPromoSuccessText !== undefined && { confirmPromoSuccessText: newConfig.confirmPromoSuccessText }),
       ...(newConfig.confirmPromoInvalidText !== undefined && { confirmPromoInvalidText: newConfig.confirmPromoInvalidText }),
       ...(newConfig.confirmFooterText !== undefined && { confirmFooterText: newConfig.confirmFooterText }),
+    });
+  }
+
+  if (
+    newConfig.paymentSuccessDmText !== undefined ||
+    newConfig.paymentSuccessDmFooter !== undefined ||
+    newConfig.paymentSuccessGroupText !== undefined ||
+    newConfig.paymentSuccessGroupFooter !== undefined ||
+    newConfig.paymentExpiredText !== undefined ||
+    newConfig.paymentExpiredFooter !== undefined ||
+    newConfig.paymentErrorText !== undefined ||
+    newConfig.paymentErrorFooter !== undefined
+  ) {
+    saveTransactionStatusConfig({
+      ...(newConfig.paymentSuccessDmText !== undefined && { paymentSuccessDmText: newConfig.paymentSuccessDmText }),
+      ...(newConfig.paymentSuccessDmFooter !== undefined && { paymentSuccessDmFooter: newConfig.paymentSuccessDmFooter }),
+      ...(newConfig.paymentSuccessGroupText !== undefined && { paymentSuccessGroupText: newConfig.paymentSuccessGroupText }),
+      ...(newConfig.paymentSuccessGroupFooter !== undefined && { paymentSuccessGroupFooter: newConfig.paymentSuccessGroupFooter }),
+      ...(newConfig.paymentExpiredText !== undefined && { paymentExpiredText: newConfig.paymentExpiredText }),
+      ...(newConfig.paymentExpiredFooter !== undefined && { paymentExpiredFooter: newConfig.paymentExpiredFooter }),
+      ...(newConfig.paymentErrorText !== undefined && { paymentErrorText: newConfig.paymentErrorText }),
+      ...(newConfig.paymentErrorFooter !== undefined && { paymentErrorFooter: newConfig.paymentErrorFooter }),
+    });
+  }
+
+  if (
+    newConfig.orderGroupNotifText !== undefined ||
+    newConfig.orderGroupNotifFooter !== undefined ||
+    newConfig.stockEmptyText !== undefined ||
+    newConfig.stockEmptyFooter !== undefined ||
+    newConfig.sessionExpiredText !== undefined ||
+    newConfig.sessionExpiredFooter !== undefined ||
+    newConfig.promoCancelledText !== undefined ||
+    newConfig.promoCancelledFooter !== undefined
+  ) {
+    saveNotificationFlowConfig({
+      ...(newConfig.orderGroupNotifText !== undefined && { orderGroupNotifText: newConfig.orderGroupNotifText }),
+      ...(newConfig.orderGroupNotifFooter !== undefined && { orderGroupNotifFooter: newConfig.orderGroupNotifFooter }),
+      ...(newConfig.stockEmptyText !== undefined && { stockEmptyText: newConfig.stockEmptyText }),
+      ...(newConfig.stockEmptyFooter !== undefined && { stockEmptyFooter: newConfig.stockEmptyFooter }),
+      ...(newConfig.sessionExpiredText !== undefined && { sessionExpiredText: newConfig.sessionExpiredText }),
+      ...(newConfig.sessionExpiredFooter !== undefined && { sessionExpiredFooter: newConfig.sessionExpiredFooter }),
+      ...(newConfig.promoCancelledText !== undefined && { promoCancelledText: newConfig.promoCancelledText }),
+      ...(newConfig.promoCancelledFooter !== undefined && { promoCancelledFooter: newConfig.promoCancelledFooter }),
+    });
+  }
+
+  if (
+    newConfig.contactOwnerEmptyText !== undefined ||
+    newConfig.contactAdminEmptyText !== undefined ||
+    newConfig.expiryWarningOwnerText !== undefined ||
+    newConfig.expiryWarningOwnerFooter !== undefined
+  ) {
+    saveContactStatusConfig({
+      ...(newConfig.contactOwnerEmptyText !== undefined && { contactOwnerEmptyText: newConfig.contactOwnerEmptyText }),
+      ...(newConfig.contactAdminEmptyText !== undefined && { contactAdminEmptyText: newConfig.contactAdminEmptyText }),
+      ...(newConfig.expiryWarningOwnerText !== undefined && { expiryWarningOwnerText: newConfig.expiryWarningOwnerText }),
+      ...(newConfig.expiryWarningOwnerFooter !== undefined && { expiryWarningOwnerFooter: newConfig.expiryWarningOwnerFooter }),
     });
   }
 

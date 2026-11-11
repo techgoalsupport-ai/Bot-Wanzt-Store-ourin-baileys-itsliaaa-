@@ -30,6 +30,17 @@ const CATEGORY_TABS: { id: string; label: string; countBadge?: number }[] = [
   { id: 'confirm_promo_input', label: 'Input Promo' },
   { id: 'confirm_promo_valid', label: 'Promo Valid' },
   { id: 'confirm_promo_invalid', label: 'Promo Invalid' },
+  { id: 'payment_success_dm', label: 'Bayar Sukses DM' },
+  { id: 'payment_success_group', label: 'Bayar Sukses Grup' },
+  { id: 'payment_expired', label: 'Bayar Kedaluwarsa' },
+  { id: 'payment_error', label: 'Gateway Error' },
+  { id: 'order_group_notif', label: 'Order Grup ke DM' },
+  { id: 'stock_empty', label: 'Stok Habis' },
+  { id: 'checkout_session_expired', label: 'Sesi Expired' },
+  { id: 'promo_cancelled', label: 'Promo Batal' },
+  { id: 'contact_owner_empty', label: 'Owner Kosong' },
+  { id: 'contact_admin_empty', label: 'Admin Kosong' },
+  { id: 'expiry_warning_owner', label: 'Peringatan Sewa' },
 ];
 
 export const TabTemplates: React.FC<TabTemplatesProps> = () => {
@@ -188,6 +199,61 @@ export const TabTemplates: React.FC<TabTemplatesProps> = () => {
         return {
           label: 'Promo Invalid',
           className: 'bg-rose-50 text-rose-700 border-rose-200',
+        };
+      case 'payment_success_dm':
+        return {
+          label: 'Bayar Sukses DM',
+          className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        };
+      case 'payment_success_group':
+        return {
+          label: 'Bayar Sukses Grup',
+          className: 'bg-teal-50 text-teal-700 border-teal-200',
+        };
+      case 'payment_expired':
+        return {
+          label: 'Bayar Kedaluwarsa',
+          className: 'bg-amber-50 text-amber-700 border-amber-200',
+        };
+      case 'payment_error':
+        return {
+          label: 'Gateway Error',
+          className: 'bg-rose-50 text-rose-700 border-rose-200',
+        };
+      case 'order_group_notif':
+        return {
+          label: 'Order Grup ke DM',
+          className: 'bg-sky-50 text-sky-700 border-sky-200',
+        };
+      case 'stock_empty':
+        return {
+          label: 'Stok Habis',
+          className: 'bg-orange-50 text-orange-700 border-orange-200',
+        };
+      case 'checkout_session_expired':
+        return {
+          label: 'Sesi Expired',
+          className: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+        };
+      case 'promo_cancelled':
+        return {
+          label: 'Promo Batal',
+          className: 'bg-gray-100 text-gray-700 border-gray-200',
+        };
+      case 'contact_owner_empty':
+        return {
+          label: 'Owner Kosong',
+          className: 'bg-violet-50 text-violet-700 border-violet-200',
+        };
+      case 'contact_admin_empty':
+        return {
+          label: 'Admin Kosong',
+          className: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200',
+        };
+      case 'expiry_warning_owner':
+        return {
+          label: 'Peringatan Sewa',
+          className: 'bg-red-50 text-red-700 border-red-200',
         };
       default:
         return {

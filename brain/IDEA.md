@@ -1367,5 +1367,63 @@ Catatan Tambahan:
 - Seluruh perhitungan waktu harus menggunakan zona waktu Asia/Jakarta (WIB) agar konsisten dengan notifikasi WhatsApp.
 - Wajib mematuhi larangan karakter em-dash (-) dan en-dash (-).
 
+---
 
+[22.0] - ARSITEKTUR KUSTOMISASI RESPON BOT MENYELURUH, KATEGORI TEMPLATE BARU, DAN PLACEHOLDER DINAMIS
 
+- Tanggal: 2026-11-10 12:55
+- Sumber: Permintaan Pengguna & Audit Komprehensif Respon Bot
+
+Informasi yang Dipelajari:
+1. Kebutuhan Kustomisasi Total Pesan Bot:
+   Sebelumnya, sebagian respon bot (seperti notifikasi pembayaran lunas via DM dan grup, pesan pembayaran expired, pesan error gateway, pengalihan pesanan grup ke DM, pesan stok habis, sesi checkout berakhir, pembatalan promo, pesan kontak owner/admin belum diatur, dan pengingat kedaluwarsa sewa) masih berstatus hardcoded di dalam kode backend. Pengguna menginginkan seluruh pesan tersebut dapat diedit secara bebas baik dari Dashboard Bot (oleh masing-masing tenant) maupun dari Dashboard Master (disediakan template bawaan yang dapat dikelola oleh Master Admin).
+
+2. Pemisahan Kategori Template Pesan (Anti-Campur):
+   Agar tidak membingungkan pengguna dan menjaga isolasi fungsi template, ditambahkan kategori-kategori resmi baru:
+   - Kategori Transaksi:
+     * payment_success_dm: Notifikasi pembayaran lunas ke DM pembeli.
+     * payment_success_group: Notifikasi pembayaran lunas ke grup WhatsApp.
+     * payment_expired: Pemberitahuan batas waktu pembayaran habis / transaksi batal.
+     * payment_error: Pemberitahuan kendala teknis gateway pembayaran.
+   - Kategori Alur Pesanan:
+     * order_group_notif: Pemberitahuan pengalihan rincian pesanan dari grup ke DM.
+     * stock_empty: Pemberitahuan stok habis atau saldo supplier sedang kosong.
+     * checkout_session_expired: Pemberitahuan sesi checkout 90 detik telah berakhir.
+     * promo_cancelled: Pemberitahuan pembatalan kupon saat pembeli mengetik BATAL.
+   - Kategori Kontak & Status Toko:
+     * contact_owner_empty: Pemberitahuan jika nomor kontak owner belum disetel.
+     * contact_admin_empty: Pemberitahuan jika nomor kontak admin belum disetel.
+     * expiry_warning_owner: Pesan peringatan masa aktif sewa bot ke owner tenant.
+
+3. Sistem Placeholder Dinamis Baru dan Perluasannya:
+   Untuk mendukung template yang kaya informasi, diperluas dukungan placeholder dinamis pada placeholderHelper:
+   - {customerName} / {senderName}: Nama profil WhatsApp pembeli.
+   - {customerNumber} / {senderNumber}: Nomor WhatsApp pembeli.
+   - {orderId}: ID transaksi unik pesanan.
+   - {produkName} / {productName}: Nama produk.
+   - {varian} / {variant}: Varian produk terpilih.
+   - {price}: Harga satuan produk.
+   - {total} / {totalPrice}: Total nominal pembayaran.
+   - {reason} / {errorMessage}: Alasan penolakan promo atau detail error gateway.
+   - {storeName}: Nama toko bot tenant.
+   - {ownerName}: Nama pemilik toko.
+   - {ownerNumber}: Nomor WhatsApp pemilik toko.
+   - {adminNumber}: Nomor WhatsApp admin/CS toko.
+   - {webLink}: Tautan website toko.
+   - {tenantId}: ID unit bot tenant.
+   - {remainingTime} / {sisaWaktu}: Sisa masa aktif sewa bot.
+   - {expiryDate} / {waktuKedaluwarsa}: Tanggal dan jam kedaluwarsa lengkap.
+
+Pemahaman:
+- Dengan memetakan setiap jenis respon ke kolom konfigurasi di tabel commands_config pada database SQLite per-tenant, setiap tenant dapat menentukan gaya bahasa toko mereka sendiri.
+- Master Admin tetap memegang kendali atas template bawaan di master.db (tabel message_templates) untuk memudahkan tenant memilih template profesional dengan 1 kali klik.
+
+Potensi Penerapan:
+1. Memperluas interface CommandsConfig di backend dan frontend.
+2. Memperbarui placeholderHelper.ts untuk memproses placeholder baru.
+3. Menambahkan template default untuk seluruh 11 kategori baru di masterSqlite.ts.
+4. Menambahkan sub-tab Transaksi, Notifikasi, dan Kontak pada TabCommand.tsx di Dashboard Bot lengkap dengan tombol Pilih Template.
+5. Memperbarui TabTemplates.tsx dan AddEditTemplateModal.tsx di Dashboard Master Admin.
+
+Catatan Tambahan:
+- Wajib mematuhi larangan karakter em-dash (-) dan en-dash (-).
