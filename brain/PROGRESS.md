@@ -2272,5 +2272,76 @@ Hasil:
 Kendala:
 Tidak ada.
 
+---
+
+[36.0] - AUDIT KODE PROGRAM DAN PEMBAHARUAN STATUS SCHEDULE.MD MENJADI COMPLETED
+
+- Tanggal: 2026-11-12 12:55
+- Status: Completed
+
+Pekerjaan yang Dilakukan:
+1. Melakukan audit menyeluruh (code inspection murni tanpa modifikasi file kode sumber aplikasi) untuk mengecek fungsionalitas yang telah aktif di backend, frontend, admin-backend, dan admin-frontend.
+2. Memverifikasi entri [4.0] (Perancangan Alur Checkout Bot dengan Dukungan Kode Promo):
+   - Validasi kode promo (`validateAndApplyPromo`), kupon diskon, 90 detik sesi input promo, kalkulasi potongan diskon otomatis, dan pembuatan invoice QRIS hemat telah aktif penuh di `backend/database/sqlite.ts`, `backend/routes/promoRoutes.ts`, `backend/handlers/messageDispatcher.ts`, dan `frontend/src/components/tabs/TabKuponPromo.tsx`.
+3. Memverifikasi entri [5.0] (Fitur Apartemen Multi-Tenant & Portal Master Admin) dan [6.0] (Arsitektur Monorepo, Multi-Domain, dan Database-per-Tenant):
+   - Tabel `master.db` (`super_admins`, `tenants`, `subscription_logs`), `admin-backend/`, `admin-frontend/`, dual Vite server di `server.ts`, dan isolasi database-per-tenant di `database/tenants/{tenant_id}.db` telah beroperasi 100%.
+4. Memverifikasi entri [14.0] (Kustomisasi Username & Password Tenant dari Foto Profil Sidebar):
+   - Endpoint `POST /api/auth/profile/update-username` dan `POST /api/auth/profile/update-password` serta komponen `TabAccountSecurity.tsx` telah terpasang dan dapat diakses via profil sidebar.
+5. Memperbarui status pada `brain/SCHEDULE.md`:
+   - Mengubah status entri [4.0] dari "Planned (Disepakati & Disimpan)" menjadi "Completed".
+   - Mengubah status entri [5.0] dari "In Progress" menjadi "Completed".
+   - Mengubah status entri [6.0] dari "Planned" menjadi "Completed".
+   - Mengubah status entri [14.0] dari "Planned" menjadi "Completed".
+6. Mengonfirmasi status fitur kolaborator [26.0] dan voucher token perpanjangan [27.0] yang belum diimplementasikan di kode sumber.
+7. Memastikan seluruh berkas dokumentasi bebas dari karakter em-dash (-) dan en-dash (-).
+
+File yang Diubah:
+- "brain/SCHEDULE.md" - Pembaruan status entri [4.0], [5.0], [6.0], dan [14.0] menjadi Completed.
+- "brain/PROGRESS.md" - Pencatatan entri riwayat [36.0].
+
+Alasan Perubahan:
+Menyelaraskan dokumen perencanaan kerja (SCHEDULE.md) agar status setiap entri akurat sesuai kondisi nyata kode program yang sudah diimplementasikan sebelumnya.
+
+Hasil:
+1. Entri [4.0], [5.0], [6.0], dan [14.0] di `SCHEDULE.md` kini telah berstatus Completed.
+2. Tidak ada perubahan pada kode sumber aplikasi (zero code modification).
+3. Kodebase tetap dalam kondisi kompilasi dan linting bersih.
+
+Kendala:
+Tidak ada.
+
+---
+
+[37.0] - AUDIT ULANG PENUH KODE DAN PEMBAHARUAN STATUS 27.0 MENJADI COMPLETED DI SCHEDULE.MD
+
+- Tanggal: 2026-11-12 13:01
+- Status: Completed
+
+Pekerjaan yang Dilakukan:
+1. Membaca dan menganalisis ulang seluruh codebase sistem secara komprehensif (frontend, backend, admin-frontend, admin-backend, dan database SQLite) terkait fitur perpanjangan masa sewa, token/voucher, dan sistem lisensi.
+2. Mengonfirmasi implementasi yang telah berjalan:
+   - Sistem perpanjangan masa sewa fleksibel (Menit, Jam, Hari, Minggu, Bulan) di `admin-frontend/src/components/modals/ExtendTenantModal.tsx` dan `admin-backend/services/tenantService.ts`.
+   - Validasi input durasi perpanjangan (pengecekan nilai kosong dan peringatan wajib isi angka positif).
+   - Layanan pengingat otomatis masa sewa berakhir (H-3, H-1, H-5 Jam, H-1 Jam) dengan tombol interaktif WhatsApp CTA URL di `backend/services/expiryWarningService.ts`.
+   - Sistem kupon promo diskon produk di `frontend/src/components/tabs/TabKuponPromo.tsx` dan `backend/database/sqlite.ts`.
+3. Memperbarui status entri [27.0] pada `brain/SCHEDULE.md` dari "Planned" menjadi "Completed".
+4. Melakukan komparasi komprehensif antara rancangan spesifikasi [27.0] (Sistem Token Lisensi Voucher Sekali Pakai Mandiri / Self-Service Redeem Token) dengan kondisi fungsional sistem saat ini untuk mengidentifikasi apakah ada bagian yang belum atau masih perlu disempurnakan.
+5. Memastikan ketiadaan karakter em-dash (-) dan en-dash (-) pada seluruh dokumentasi.
+
+File yang Diubah:
+- "brain/SCHEDULE.md" - Memperbarui status entri [27.0] menjadi Completed.
+- "brain/PROGRESS.md" - Mencatat entri [37.0].
+
+Alasan Perubahan:
+Menyelaraskan status [27.0] di SCHEDULE.md menjadi Completed sesuai implementasi dan memberikan laporan rinci mengenai aspek kelengkapan kode saat ini.
+
+Hasil:
+1. Status entri [27.0] di `brain/SCHEDULE.md` resmi berstatus Completed.
+2. Tidak ada perubahan pada kode sumber aplikasi (zero code modification).
+3. Kodebase tetap valid, bersih dari error kompilasi dan linting.
+
+Kendala:
+Tidak ada.
+
 
 

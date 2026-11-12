@@ -223,7 +223,7 @@ Folder database rapi dan bersih dari artefak legacy tanpa mempengaruhi integrita
 [4.0] - PERANCANGAN ALUR CHECKOUT BOT DENGAN DUKUNGAN KODE PROMO
 
 - Tanggal: 2026-11-01 21:45
-- Status: Planned (Disepakati & Disimpan)
+- Status: Completed
 
 Tujuan:
 Menerapkan alur checkout interaktif berbasis sesi di Chat Pribadi (DM) WhatsApp agar pelanggan dapat memanfaatkan kupon diskon/kode promo sebelum invoice QRIS diterbitkan, tanpa menghambat pembeli yang ingin langsung membayar dengan harga normal.
@@ -251,7 +251,7 @@ Alur checkout berjalan interaktif, fleksibel, ramah pengguna, aman dari segi pri
 [5.0] - PERSIAPAN & IMPLEMENTASI FITUR APARTEMEN (MULTI-TENANT & PORTAL MASTER ADMIN)
 
 - Tanggal: 2026-11-01 19:39
-- Status: In Progress
+- Status: Completed
 
 Tujuan:
 Mempersiapkan dan mengimplementasikan arsitektur "Fitur Apartemen" (Multi-Tenant & Master Admin Dashboard) agar platform bot WhatsApp dapat menyewakan unit-unit bot ke berbagai pemilik toko/penyewa secara terisolasi, terukur, dan aman.
@@ -290,7 +290,7 @@ Platform memiliki sistem manajemen multi-tenant apartemen yang siap pakai, aman,
 [6.0] - IMPLEMENTASI TAHAP 4: ARSITEKTUR MONOREPO, MULTI-DOMAIN, DAN DATABASE-PER-TENANT
 
 - Tanggal: 2026-11-01 23:48
-- Status: Planned
+- Status: Completed
 
 Tujuan:
 Menerapkan arsitektur lengkap Tahap 4 (Fitur Apartemen Multi-Tenant) sesuai hasil kesepakatan:
@@ -521,7 +521,7 @@ Admin dapat membuat akun unit toko baru dalam 1-klik tanpa repot memikirkan user
 [14.0] - IMPLEMENTASI HALAMAN KUSTOMISASI USERNAME & PASSWORD TENANT DARI FOTO PROFIL SIDEBAR
 
 - Tanggal: 2026-11-03 20:39
-- Status: Planned
+- Status: Completed
 
 Tujuan:
 Menyediakan fitur mandiri bagi tenant untuk mengubah username dan password toko mereka sendiri dari dalam dashboard, dengan titik masuk (entry point) berupa klik pada foto/kartu profil di bagian bawah sidebar.
@@ -933,7 +933,7 @@ Kolaborator atau reseller dapat mengintegrasikan penjualan sewa bot ke sistem ka
 [27.0] - SISTEM TOKEN LISENSI VOUCHER PERPANJANGAN MASA SEWA BOT DAN HALAMAN REDEEM TENANT
 
 - Tanggal: 2026-11-07 05:59
-- Status: Planned
+- Status: Completed
 
 Tujuan:
 Menerapkan sistem perpanjangan masa sewa bot mandiri berbasis kode token sekali pakai (single-use voucher):
