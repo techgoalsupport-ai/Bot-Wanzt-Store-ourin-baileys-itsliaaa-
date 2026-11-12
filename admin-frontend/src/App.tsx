@@ -13,6 +13,7 @@ import { DeleteTenantModal } from './components/modals/DeleteTenantModal.tsx';
 import { ToggleSuspendModal } from './components/modals/ToggleSuspendModal.tsx';
 import { TabTemplates } from './components/dashboard/tabs/TabTemplates.tsx';
 import { TabTelegramAdmin } from './components/dashboard/tabs/TabTelegramAdmin.tsx';
+import { TabTokenManagement } from './components/dashboard/tabs/TabTokenManagement.tsx';
 import {
   Building2,
   ShieldCheck,
@@ -198,6 +199,10 @@ export default function App() {
 
           {selectedNavTab === 'telegram' && (
             <TabTelegramAdmin showToast={showToast} />
+          )}
+
+          {selectedNavTab === 'tokens' && (
+            <TabTokenManagement showToast={showToast} />
           )}
 
           {selectedNavTab === 'stats' && (

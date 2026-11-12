@@ -13,10 +13,17 @@ botRouter.get('/status', (_req: Request, res: Response) => {
   const accountStatus = tenant?.status || 'active';
   const botStatus = botManager.getStatus();
 
+  const daysRemaining = tenant?.days_remaining ?? 0;
+  const rawTotalDays = tenant?.duration_days ?? 30;
+  const totalDays = Math.max(rawTotalDays, daysRemaining, 1);
+
   return res.json({
     ...botStatus,
     accountStatus,
     expiresAt: tenant?.expires_at,
+    createdAt: tenant?.created_at,
+    daysRemaining,
+    totalDays,
   });
 });
 

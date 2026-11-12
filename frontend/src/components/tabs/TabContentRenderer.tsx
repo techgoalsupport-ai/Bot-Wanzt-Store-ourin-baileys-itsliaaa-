@@ -11,6 +11,7 @@ import { TabKoneksiLayanan } from './TabKoneksiLayanan';
 import { TabGrup } from './TabGrup';
 import { TabTransaksi } from './TabTransaksi';
 import { TabAccountSecurity } from './TabAccountSecurity';
+import { TabBotManagement } from './TabBotManagement';
 import { useStoreConfig } from '../../hooks/useStoreConfig';
 import { useXavieraData } from '../../hooks/useXavieraData';
 import { useWhatsAppGroups } from '../../hooks/useWhatsAppGroups';
@@ -474,6 +475,22 @@ export const TabContentRenderer: React.FC<TabContentRendererProps> = ({
       <TabAccountSecurity
         currentUsername={currentUsername}
         onUsernameUpdated={onUsernameUpdated}
+        showToast={showToast}
+      />
+    );
+  }
+
+  // 12. MANAGEMENT BOT (Status Bot, Masa Aktif, Tanggal Expired, Form Redeem Token)
+  if (
+    selectedTab === 'Management Bot' ||
+    selectedTab === 'Bot Management' ||
+    selectedTab === 'ManagementBot' ||
+    selectedTab === 'Masa Sewa' ||
+    selectedTab === 'Voucher Token'
+  ) {
+    return (
+      <TabBotManagement
+        botData={botConn.botData}
         showToast={showToast}
       />
     );

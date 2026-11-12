@@ -49,3 +49,15 @@ export interface GlobalStats {
   suspendedTenants: number;
   serverTime: string;
 }
+
+export interface LicenseToken {
+  id: string;
+  token_code: string;
+  amount: number;
+  unit: DurationUnit;
+  duration_label: string;
+  status: 'available' | 'used' | 'revoked';
+  created_at: string;
+  used_by_tenant_id?: string;
+  used_at?: string;
+}

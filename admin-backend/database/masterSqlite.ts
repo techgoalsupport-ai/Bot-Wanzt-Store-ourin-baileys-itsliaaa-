@@ -94,6 +94,23 @@ export function initMasterDatabase(): Database.Database {
     );
   `);
 
+  // Tabel Token Lisensi Voucher Perpanjangan Masa Sewa Bot
+  masterDb.exec(`
+    CREATE TABLE IF NOT EXISTS extension_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      token_code TEXT UNIQUE NOT NULL,
+      amount INTEGER NOT NULL,
+      unit TEXT NOT NULL,
+      duration_label TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'available',
+      created_at TEXT NOT NULL,
+      used_by_tenant_id TEXT,
+      used_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_extension_tokens_code ON extension_tokens (token_code);
+    CREATE INDEX IF NOT EXISTS idx_extension_tokens_status ON extension_tokens (status);
+  `);
+
   // Seed default super admin jika kosong
   const adminCount = (masterDb.prepare('SELECT COUNT(*) as count FROM super_admins').get() as { count: number }).count;
   if (adminCount === 0) {

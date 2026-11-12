@@ -2592,5 +2592,215 @@ Rencana Pengujian:
 Hasil yang Diharapkan:
 Dev server aktif persisten di port 3000 tanpa error pre-warming.
 
+---
 
+[55.0] - IMPLEMENTASI FRONTEND HALAMAN MANAGEMENT BOT (TENANT) DAN MANAGEMENT TOKEN (MASTER ADMIN)
 
+- Tanggal: 2026-11-11 21:05
+- Status: Completed
+Referensi SCHEDULE: 27.0
+
+Tujuan Implementasi:
+Membangun antarmuka pengguna (Frontend UI) untuk sistem token lisensi voucher perpanjangan masa sewa bot:
+1. Pada Dashboard Bot (Tenant): Menyediakan tab baru "Management Bot" yang menampilkan status bot (aktif, suspend, atau expired), masa aktif dalam format wajib [sisa hari]/[total hari] day (contoh: 26/30 day), tanggal kedaluwarsa lengkap dalam format bahasa Indonesia (contoh: Rabu, 30 Desember 2026), serta form input kode token voucher 12-karakter disertai tombol "Gunakan Token".
+2. Pada Dashboard Master Admin: Menyediakan tab baru "Management Token" pada navigasi sidebar, tombol aksi "Buat Token Baru", modal dialog pembuatan token dengan pilihan durasi fleksibel (menit, jam, hari, bulan), popup konfirmasi token baru berformat terstruktur (1211-XUEB-30DA-ODHR) yang siap disalin ke clipboard, serta tabel manajemen token (Kode Token, Tanggal Pembuatan, Masa Aktif, Status Token).
+3. Memastikan batasan fase 1 dipatuhi secara ketat: hanya membuat tampilan frontend terlebih dahulu tanpa mengubah atau menulis logika backend pada tahap ini.
+
+Bagian yang Akan Diubah/Dibuat:
+1. "frontend/src/components/tabs/TabBotManagement.tsx" (Baru):
+   - Komponen halaman Management Bot dengan kartu status bot, kartu masa aktif (rasio hari & progress visual), kartu tanggal kedaluwarsa, dan kartu form redeem token voucher.
+2. "frontend/src/components/layout/DesktopSidebar.tsx":
+   - Menambahkan menu navigasi "Management Bot" pada daftar menu sidebar tenant.
+3. "frontend/src/components/tabs/TabContentRenderer.tsx":
+   - Menghubungkan selectedTab === 'Management Bot' ke komponen TabBotManagement.
+4. "admin-frontend/src/components/layout/AdminSidebar.tsx":
+   - Menambahkan 'tokens' ke AdminNavTab dan menambahkan navItems "Management Token".
+5. "admin-frontend/src/components/layout/AdminHeader.tsx":
+   - Menambahkan penanganan judul tab 'tokens' ("Management Token Lisensi").
+6. "admin-frontend/src/components/modals/CreateTokenModal.tsx" (Baru):
+   - Modal input durasi dan satuan waktu (Menit, Jam, Hari, Bulan) dengan preset cepat dan tombol konfirmasi generate.
+7. "admin-frontend/src/components/modals/TokenCreatedModal.tsx" (Baru):
+   - Modal tampilan token baru 12-karakter berstruktur DDMM-XXXX-XXDA-XXXX dengan tombol salin (copy) dan indikator sukses.
+8. "admin-frontend/src/components/dashboard/tabs/TabTokenManagement.tsx" (Baru):
+   - Komponen tabel manajemen token master admin dengan tombol Buat Token Baru, kartu metrik, pencarian/filter, dan daftar token.
+9. "admin-frontend/src/App.tsx":
+   - Mengintegrasikan selectedNavTab === 'tokens' untuk merender TabTokenManagement dan modal terkait.
+
+Alasan Perubahan:
+Memenuhi instruksi pengguna untuk mengembangkan tampilan frontend dari fitur [27.0] terlebih dahulu sebelum menghubungkan logika backend dan database.
+
+Strategi Implementasi:
+1. Buat TabBotManagement.tsx pada frontend bot dengan estetika modern bersih (#0084D1, kartu putih rounded-2xl, border-slate-200, badge kontras, dan input kode voucher berformat otomatis).
+2. Daftarkan tab "Management Bot" di DesktopSidebar.tsx dan TabContentRenderer.tsx.
+3. Buat CreateTokenModal.tsx dan TokenCreatedModal.tsx pada admin-frontend.
+4. Buat TabTokenManagement.tsx dengan tabel interaktif dan generator token klien format 4 blok (DDMM-XXXX-XXDA-XXXX).
+5. Daftarkan menu "Management Token" di AdminSidebar.tsx, AdminHeader.tsx, dan render di admin-frontend/src/App.tsx.
+6. Jalankan compile_applet dan lint_applet bersamaan untuk memverifikasi nol kesalahan kompilasi.
+7. Pastikan tidak ada karakter em-dash pada seluruh file yang diubah.
+
+Urutan Pengerjaan:
+1. Buat frontend/src/components/tabs/TabBotManagement.tsx.
+2. Update frontend/src/components/layout/DesktopSidebar.tsx.
+3. Update frontend/src/components/tabs/TabContentRenderer.tsx.
+4. Buat admin-frontend/src/components/modals/CreateTokenModal.tsx.
+5. Buat admin-frontend/src/components/modals/TokenCreatedModal.tsx.
+6. Buat admin-frontend/src/components/dashboard/tabs/TabTokenManagement.tsx.
+7. Update admin-frontend/src/components/layout/AdminSidebar.tsx dan AdminHeader.tsx.
+8. Update admin-frontend/src/App.tsx.
+9. Jalankan compile_applet dan lint_applet.
+10. Update status di brain/LANGKAH_IMPLEMENTASI.md dan catat di brain/PROGRESS.md.
+
+Dampak Perubahan:
+Pengguna dapat melihat dan menguji seluruh antarmuka Management Bot pada dashboard tenant serta Management Token pada dashboard master admin dengan layout yang rapi dan siap dihubungkan ke backend.
+
+Rencana Pengujian:
+1. Periksa tampilan tab "Management Bot" di dashboard tenant.
+2. Periksa tampilan tab "Management Token" di dashboard master admin.
+3. Uji interaksi tombol Buat Token Baru, isi form durasi, konfirmasi, pratinjau token dan tombol salin.
+4. Verifikasi compile_applet dan lint_applet sukses 100% tanpa error.
+
+Hasil yang Diharapkan:
+Tampilan antarmuka Management Bot dan Management Token tersaji dengan sempurna, responsif di desktop maupun mobile, serta sesuai dengan seluruh aturan spesifikasi dari pengguna.
+
+---
+
+[56.0] - IMPLEMENTASI BACKEND SISTEM TOKEN LISENSI VOUCHER DAN INTEGRASI REDEEM PERPANJANGAN SEWA
+
+- Tanggal: 2026-11-11 22:02
+- Status: Completed
+Referensi SCHEDULE: 27.0
+
+Tujuan Implementasi:
+Membangun dan mengintegrasikan fungsionalitas backend penuh untuk sistem token lisensi voucher perpanjangan masa sewa bot:
+1. Menyiapkan tabel SQLite `extension_tokens` di database pusat `database/master.db` untuk menyimpan data voucher (id, token_code, amount, unit, duration_label, status, created_at, used_by_tenant_id, used_at).
+2. Membangun generator token 16 karakter terstruktur dengan rumus resmi:
+   - Blok 1 (4 karakter): Tanggal dan Bulan pembuatan token (format DDMM, misal 1211).
+   - Blok 2 (4 karakter): Kode acak alfanumerik (misal XUEB).
+   - Blok 3 (4 karakter): Masa aktif dengan 2 digit angka dan 2 huruf kode unit (Hari: DA, Menit: MI, Jam: HO, Bulan: MO, misal 30DA, 15MI, 02HO, 01MO).
+   - Blok 4 (4 karakter): Kode acak alfanumerik (misal ODHR).
+   - Total panjang token: 16 karakter alfanumerik (format: DDMM-XXXX-XXDA-XXXX).
+3. Menyediakan service dan REST API Master Admin (`/api/admin/tokens` dan `/api/admin/tokens/create`) untuk membuat dan mengambil daftar riwayat voucher.
+4. Menyediakan endpoint tenant (`POST /api/bot/redeem-token`) untuk memproses penukaran voucher secara mandiri:
+   - Validasi ketat: token harus valid dan berstatus 'available'.
+   - Penolakan jika sudah pernah digunakan oleh tenant lain (single-use voucher universal).
+   - Otomatis memperpanjang masa aktif tenant (`expires_at`), mengembalikan status akun ke 'active' jika sebelumnya expired/suspended, serta mereset flag peringatan masa sewa (`warned_3d`, `warned_1d`, `warned_5h`, `warned_1h`).
+   - Mengubah status token menjadi 'used' dan mencatat tenant_id serta waktu redeem.
+5. Menghubungkan antarmuka frontend `TabTokenManagement.tsx` dan `TabBotManagement.tsx` ke endpoint API riil.
+
+Bagian yang Akan Diubah/Dibuat:
+1. "admin-backend/database/masterSqlite.ts":
+   - Menambahkan tabel `extension_tokens` dan indeks unik `token_code`.
+2. "admin-backend/services/tokenService.ts" (Baru):
+   - Service manajemen token lisensi: pembuatan token 16 karakter terstruktur, pengambilan daftar token, validasi, dan penukaran token perpanjangan sewa.
+3. "admin-backend/routes/tokenRoutes.ts" (Baru):
+   - Endpoint Master Admin: GET / (daftar token) dan POST /create (generate token baru).
+4. "admin-backend/routes/adminRoutes.ts":
+   - Mounting sub-router `tokenRoutes` pada adminRouter.
+5. "backend/routes/tenantTokenRoutes.ts" (Baru):
+   - Endpoint penukaran voucher bagi tenant: POST /redeem-token.
+6. "backend/app.ts":
+   - Mounting `tenantTokenRoutes` pada endpoint `/api/bot`.
+7. "admin-frontend/src/components/dashboard/tabs/TabTokenManagement.tsx":
+   - Integrasi pemanggilan API riil untuk memuat daftar token dan membuat token baru.
+8. "frontend/src/components/tabs/TabBotManagement.tsx":
+   - Integrasi pemanggilan API riil `POST /api/bot/redeem-token`, penanganan error, dan pembaruan tampilan status setelah sukses.
+
+Alasan Perubahan:
+Melengkapi antarmuka frontend yang telah disiapkan sebelumnya dengan fungsionalitas backend dan database nyata, sehingga admin dapat menghasilkan token voucher resmi dan tenant dapat memperpanjang masa sewa bot secara instan dan mandiri.
+
+Strategi Implementasi:
+1. Tambahkan skema `extension_tokens` pada `masterSqlite.ts`.
+2. Buat `tokenService.ts` yang mengimplementasikan generator 16 karakter (DDMM-XXXX-XXDA-XXXX) dengan kode unit resmi (DA, MI, HO, MO) dan fungsi redeem transaksional.
+3. Buat `tokenRoutes.ts` dan hubungkan ke `adminRoutes.ts`.
+4. Buat `tenantTokenRoutes.ts` dan daftarkan ke `backend/app.ts`.
+5. Update `TabTokenManagement.tsx` dan `TabBotManagement.tsx` agar melakukan fetch ke API backend.
+6. Uji kompilasi dengan `compile_applet` dan `lint_applet`.
+7. Uji eksekusi endpoint via curl (generate token, redeem token, dan coba redeem ulang untuk memastikan penolakan single-use).
+8. Pastikan ketiadaan karakter em-dash di seluruh file.
+
+Urutan Pengerjaan:
+1. Update admin-backend/database/masterSqlite.ts.
+2. Buat admin-backend/services/tokenService.ts.
+3. Buat admin-backend/routes/tokenRoutes.ts dan update admin-backend/routes/adminRoutes.ts.
+4. Buat backend/routes/tenantTokenRoutes.ts dan update backend/app.ts.
+5. Update admin-frontend/src/components/dashboard/tabs/TabTokenManagement.tsx.
+6. Update frontend/src/components/tabs/TabBotManagement.tsx.
+7. Jalankan compile_applet dan lint_applet.
+8. Uji coba fungsional via curl.
+9. Selesaikan dokumentasi di brain/LANGKAH_IMPLEMENTASI.md dan catat di brain/PROGRESS.md.
+
+Dampak Perubahan:
+Sistem voucher token 16 karakter berfungsi penuh dari hulu ke hilir. Master Admin dapat mencetak voucher dan tenant dapat langsung memperpanjang masa aktif bot 24/7 secara otomatis.
+
+Rencana Pengujian:
+1. Uji pembuatan token baru di Master Admin (verifikasi format 16 karakter: misal 1211-XXXX-30DA-XXXX).
+2. Uji penukaran kode token oleh akun tenant: pastikan masa aktif bertambah dan status menjadi aktif.
+3. Uji penukaran ulang kode token yang sama: pastikan sistem menolak dengan pesan error bahwa token sudah pernah digunakan.
+4. Verifikasi compile_applet dan lint_applet 100% sukses.
+
+Hasil yang Diharapkan:
+Sistem voucher token lisensi perpanjangan masa sewa beroperasi secara aman, konsisten, dan akurat sesuai spesifikasi pengguna.
+
+---
+
+[57.0] - PERBAIKAN KALKULASI TOTAL MASA AKTIF BOT (ELIMINASI PEMBULATAN KELIPATAN 30 & SINKRONISASI TOTAL HARI RIIL)
+
+- Tanggal: 2026-11-12 02:11
+- Status: Completed
+Referensi SCHEDULE: 27.0
+
+Tujuan Implementasi:
+Memperbaiki bug kalkulasi total masa aktif pada halaman Management Bot:
+1. Menghilangkan rumus pembulatan kelipatan 30 hari (Math.ceil(sisaHari / 30) * 30) yang menyebabkan anomali tampilan rasio sisa/total hari (contoh: 431/450 + 5 hari menjadi 436/450, atau 450/450 + 3 hari melonjak menjadi 453/480).
+2. Menyediakan data riil `totalDays` (total durasi masa sewa dari awal pembuatan/akumulasi sewa sampai kedaluwarsa) dan `daysRemaining` langsung dari backend pada endpoint `GET /api/bot/status` serta respon redeem `POST /api/bot/redeem-token`.
+3. Memastikan saat token voucher di-redeem (misal +5 hari atau +3 hari), total masa aktif bertambah tepat sebesar hari yang ditambahkan (contoh: 431/450 menjadi 436/455, 450/450 menjadi 453/453).
+
+Bagian yang Akan Diubah:
+1. "backend/routes/botRoutes.ts":
+   - Menyertakan field `totalDays`, `daysRemaining`, dan `createdAt` dari database tenant pada respon JSON GET /api/bot/status.
+2. "admin-backend/services/tokenService.ts":
+   - Menghitung dan menyertakan `newTotalDays` pada hasil kembalian `redeemToken()`.
+3. "backend/routes/tenantTokenRoutes.ts":
+   - Meneruskan `newTotalDays` pada respon JSON POST /api/bot/redeem-token.
+4. "frontend/src/types/dashboard.types.ts":
+   - Menambahkan field `totalDays?: number`, `daysRemaining?: number`, dan `createdAt?: string` pada interface `BotStatusResponse`.
+5. "frontend/src/components/tabs/TabBotManagement.tsx":
+   - Menghapus rumus `Math.ceil(remainingDays / 30) * 30`.
+   - Menggunakan kalkulasi riil berdasarkan `totalDays` atau selisih tanggal `expiresAt` dan `createdAt`.
+   - Menyelaraskan pertambahan total masa aktif ketika token berhasil di-redeem.
+
+Alasan Perubahan:
+Pengguna menemukan ketidaksesuaian di mana pertambahan masa aktif via token voucher tidak menambah angka total masa aktif secara presisi (contoh 431/450 + 5 hari malah menampilkan 436/450 bukannya 436/455, dan 450/450 + 3 hari melonjak ke 453/480).
+
+Strategi Implementasi:
+1. Di backend/routes/botRoutes.ts, ambil record tenant dari TenantManager/TenantService:
+   - Hitung totalDays: selisih hari antara expires_at dan created_at.
+   - Hitung daysRemaining: selisih hari antara expires_at dan waktu sekarang.
+2. Di admin-backend/services/tokenService.ts, hitung newTotalDays setelah perpanjangan sewa:
+   - newTotalDays: selisih hari antara newExp dan created_at.
+3. Di frontend/src/types/dashboard.types.ts, update BotStatusResponse.
+4. Di frontend/src/components/tabs/TabBotManagement.tsx:
+   - Gunakan data totalDays dan daysRemaining riil.
+   - Saat token di-redeem, simpan newTotalDays dan newExpiresAt.
+5. Verifikasi dengan compile_applet dan lint_applet.
+6. Uji fungsional melalui endpoint API dan cek tampilan.
+
+Urutan Pengerjaan:
+1. Update backend/routes/botRoutes.ts.
+2. Update admin-backend/services/tokenService.ts dan backend/routes/tenantTokenRoutes.ts.
+3. Update frontend/src/types/dashboard.types.ts.
+4. Update frontend/src/components/tabs/TabBotManagement.tsx.
+5. Jalankan compile_applet dan lint_applet.
+6. Uji coba dengan curl.
+7. Selesaikan catatan di brain/LANGKAH_IMPLEMENTASI.md dan catat di brain/PROGRESS.md.
+
+Dampak Perubahan:
+Rasio masa aktif pada kartu Management Bot menjadi 100% akurat dan bertambah presisi sesuai durasi token voucher yang dimasukkan.
+
+Rencana Pengujian:
+1. Periksa respon GET /api/bot/status (memuat totalDays dan daysRemaining).
+2. Periksa respon POST /api/bot/redeem-token (memuat newTotalDays dan newDaysRemaining).
+3. Verifikasi compile_applet dan lint_applet berhasil tanpa error.
+
+Hasil yang Diharapkan:
+Tampilan format [sisa hari]/[total hari] day bertambah secara presisi dan konsisten saat token di-redeem (misal 431/450 + 5 hari menjadi 436/455 day, dan 450/450 + 3 hari menjadi 453/453 day).

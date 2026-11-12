@@ -16,6 +16,7 @@ import {
   Radio,
   X,
   LogOut,
+  Bot,
 } from 'lucide-react';
 import { BotStatusResponse, StoreInfoConfig } from '../../types/dashboard.types';
 
@@ -158,6 +159,14 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       icon: Receipt,
       badge: transactionsCount > 0 ? transactionsCount : undefined,
       aliases: ['tab05'],
+    },
+    {
+      id: 'Management Bot',
+      label: 'Management Bot',
+      icon: Bot,
+      badge: botData.accountStatus === 'suspended' ? 'Suspend' : botData.accountStatus === 'expired' ? 'Expired' : undefined,
+      badgeColor: botData.accountStatus === 'suspended' ? 'bg-rose-600' : 'bg-amber-600',
+      aliases: ['Bot Management', 'ManagementBot', 'Masa Sewa', 'Voucher Token'],
     },
   ];
 

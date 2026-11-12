@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Store, ExternalLink, RefreshCw, Building2, BarChart3, Radio, ShieldCheck, LayoutTemplate } from 'lucide-react';
+import { Menu, Store, ExternalLink, RefreshCw, Building2, BarChart3, Radio, ShieldCheck, LayoutTemplate, Send, Ticket } from 'lucide-react';
 import { AdminNavTab } from './AdminSidebar.tsx';
 
 interface AdminHeaderProps {
@@ -28,6 +28,18 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           title: 'Template Message',
           subtitle: 'Katalog template respon pesan bot resmi untuk seluruh toko',
           icon: LayoutTemplate,
+        };
+      case 'telegram':
+        return {
+          title: 'Bot Telegram',
+          subtitle: 'Manajemen notifikasi bot Telegram milik masing-masing tenant',
+          icon: Send,
+        };
+      case 'tokens':
+        return {
+          title: 'Management Token Lisensi',
+          subtitle: 'Kelola voucher token lisensi perpanjangan masa sewa bot multi-tenant',
+          icon: Ticket,
         };
       case 'stats':
         return {

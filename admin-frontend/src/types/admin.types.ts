@@ -81,3 +81,15 @@ export interface CreateTemplateInput {
   content: string;
   is_active?: boolean | number;
 }
+
+export interface LicenseToken {
+  id: string;
+  token_code: string;
+  amount: number;
+  unit: DurationUnit;
+  duration_label: string;
+  status: 'available' | 'used' | 'revoked';
+  created_at: string;
+  used_by_tenant_id?: string;
+  used_at?: string;
+}
