@@ -17,6 +17,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { StoreInfoConfig } from '../../types/dashboard.types';
+import { toDisplayPhone, toOfficialPhone, formatOfficialDisplay } from '../../utils/phoneUtils';
 
 interface TabStoreInfoProps {
   storeInfo: StoreInfoConfig;
@@ -49,8 +50,14 @@ export const TabStoreInfo: React.FC<TabStoreInfoProps> = ({
   };
 
   const handleSave = () => {
-    setStoreInfo(formData);
-    onSave(formData);
+    const toSave: StoreInfoConfig = {
+      ...formData,
+      ownerNumber: formData.ownerNumber ? toOfficialPhone(formData.ownerNumber) : '',
+      adminNumber: formData.adminNumber ? toOfficialPhone(formData.adminNumber) : '',
+    };
+    setFormData(toSave);
+    setStoreInfo(toSave);
+    onSave(toSave);
     showToast('Informasi profil toko berhasil disimpan!');
   };
 
@@ -120,7 +127,7 @@ export const TabStoreInfo: React.FC<TabStoreInfoProps> = ({
                 </span>
                 <span className="text-slate-300">•</span>
                 <span className="font-mono text-slate-600">
-                  {formData.ownerNumber ? `+${formData.ownerNumber}` : 'Nomor belum diisi'}
+                  {formData.ownerNumber ? formatOfficialDisplay(formData.ownerNumber) : 'Nomor belum diisi'}
                 </span>
               </p>
             </div>
@@ -267,8 +274,14 @@ export const TabStoreInfo: React.FC<TabStoreInfoProps> = ({
                   </div>
                   <input
                     type="text"
-                    value={formData.ownerNumber || ''}
-                    onChange={(e) => setFormData({ ...formData, ownerNumber: e.target.value })}
+                    value={toDisplayPhone(formData.ownerNumber)}
+                    onChange={(e) => {
+                      const cleanDisplay = toDisplayPhone(e.target.value);
+                      setFormData({
+                        ...formData,
+                        ownerNumber: cleanDisplay ? toOfficialPhone(cleanDisplay) : '',
+                      });
+                    }}
                     placeholder="81234567890"
                     className="w-full px-3 py-2.5 text-xs font-mono font-semibold text-slate-900 placeholder-slate-400 focus:outline-none"
                   />
@@ -354,8 +367,14 @@ export const TabStoreInfo: React.FC<TabStoreInfoProps> = ({
                   </div>
                   <input
                     type="text"
-                    value={formData.adminNumber || ''}
-                    onChange={(e) => setFormData({ ...formData, adminNumber: e.target.value })}
+                    value={toDisplayPhone(formData.adminNumber)}
+                    onChange={(e) => {
+                      const cleanDisplay = toDisplayPhone(e.target.value);
+                      setFormData({
+                        ...formData,
+                        adminNumber: cleanDisplay ? toOfficialPhone(cleanDisplay) : '',
+                      });
+                    }}
                     placeholder="82345678901"
                     className="w-full px-3 py-2.5 text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none"
                   />
@@ -542,7 +561,7 @@ export const TabStoreInfo: React.FC<TabStoreInfoProps> = ({
                   {formData.ownerNumber && (
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-slate-800">Kontak:</span>
-                      <span>+{formData.ownerNumber}</span>
+                      <span>{formatOfficialDisplay(formData.ownerNumber)}</span>
                     </div>
                   )}
                   {formData.adminName && (
@@ -592,9 +611,9 @@ export const TabStoreInfo: React.FC<TabStoreInfoProps> = ({
               {[
                 { tag: '{storeName}', label: 'Nama Store Resmi', val: formData.storeName || '-' },
                 { tag: '{ownerName}', label: 'Nama Pemilik Toko', val: formData.ownerName || '-' },
-                { tag: '{ownerNumber}', label: 'No. WhatsApp Pemilik', val: formData.ownerNumber || '-' },
+                { tag: '{ownerNumber}', label: 'No. WhatsApp Pemilik', val: formatOfficialDisplay(formData.ownerNumber) || '-' },
                 { tag: '{adminName}', label: 'Nama Customer Service', val: formData.adminName || '-' },
-                { tag: '{adminNumber}', label: 'No. WhatsApp CS', val: formData.adminNumber || '-' },
+                { tag: '{adminNumber}', label: 'No. WhatsApp CS', val: formatOfficialDisplay(formData.adminNumber) || '-' },
                 { tag: '{webLink}', label: 'Tautan Website Toko', val: formData.webLink || '-' },
                 { tag: '{waLink}', label: 'Tautan Saluran WhatsApp', val: formData.waLink || '-' },
                 { tag: '{telegramBot}', label: 'Username Bot Telegram', val: formData.telegramBot || '-' },

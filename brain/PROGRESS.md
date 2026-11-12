@@ -2047,3 +2047,230 @@ Hasil:
 
 Kendala:
 Tidak ada.
+
+---
+
+[32.0] - FORMAT TAMPILAN NOMOR TELEPON 8xxxxxx DAN PENYIMPANAN RESMI +62
+
+- Tanggal: 2026-11-10 17:53
+- Status: Completed
+Referensi LANGKAH_IMPLEMENTASI: 51.0
+
+Pekerjaan yang Dilakukan:
+1. Membuat modul utilitas `frontend/src/utils/phoneUtils.ts` yang menyediakan:
+   - `toDisplayPhone`: memangkas awalan kode negara ('+62', '62', '0') dari nomor telepon sehingga hanya menyisakan angka lokal yang diawali digit '8...' untuk keperluan tampilan di dalam kolom input yang sudah memiliki badge '+62'.
+   - `toOfficialPhone`: mengonversi nomor lokal menjadi format resmi negara berawalan '+62' (contoh: '+6282173515807').
+   - `formatOfficialDisplay`: memformat nomor telepon untuk keperluan label/preview tanpa risiko double plus ('++62').
+2. Memperbarui antarmuka form toko di `frontend/src/components/tabs/TabStoreInfo.tsx`:
+   - Kolom "WhatsApp Owner" kini hanya menampilkan format '8...' (`toDisplayPhone(formData.ownerNumber)`), sementara nilai yang tersimpan di state dan dikirim ke server berformat resmi '+62...'.
+   - Menambahkan auto-sanitasi pada event `onChange`: jika pengguna mengetik atau menyalin nomor berawalan '08...', '628...', atau '+628...', awalan otomatis dipangkas sehingga teks di dalam kotak form selalu berawalan '8...'.
+   - Menerapkan perlakuan identik pada kolom "WhatsApp Admin CS".
+   - Memperbarui pratinjau nomor di hero banner, tanda tangan footer pesan bot, dan kartu variabel dinamis agar selalu menampilkan format resmi tanpa double '+'.
+3. Memperbarui modal setup wajib toko `frontend/src/components/modals/MandatoryStoreSetupModal.tsx`:
+   - Nilai input nomor WhatsApp diawali dengan `toDisplayPhone`.
+   - Handler `onChange` otomatis memangkas awalan 62 atau 0.
+   - Saat submit, nomor dinormalisasi ke `toOfficialPhone` ('+628...') sebelum dikirim ke API `/api/auth/store-setup`.
+4. Memperbarui backend di `backend/services/placeholderHelper.ts` dan `backend/config/configManager.ts`:
+   - Menambahkan fungsi `toOfficialIndonesianPhone`.
+   - Pada fungsi `saveStoreInfo`, nomor telepon owner dan admin otomatis dinormalisasi menjadi format resmi '+62' sebelum disimpan ke database SQLite toko dan disinkronkan ke `master.db`.
+5. Memperbarui rute backend `backend/routes/authRoutes.ts` pada endpoint `/api/auth/store-setup` agar menyimpan dan menyinkronkan nomor owner dalam format '+628...'.
+6. Memperbarui `admin-backend/utils/phoneUtils.ts` dan `admin-backend/services/tenantService.ts`:
+   - `normalizeIndonesianPhone` kini mengembalikan format resmi '+628...'.
+   - `updateStoreInfo` otomatis menormalisasi nomor telepon saat memperbarui data di `master.db`.
+7. Memperbarui modal tambah tenant di `admin-frontend/src/components/modals/AddTenantModal.tsx` dengan badge bendera +62 dan format input 8...
+8. Melakukan migrasi data existing pada `database/master.db` dan seluruh database SQLite tenant (`database/tenants/*.db`) sehingga nomor telepon yang tersimpan sebelumnya diperbarui ke format resmi '+628...'.
+9. Menguji verifikasi kompilasi (`compile_applet`), linting TypeScript (`lint_applet`), dan pengujian API via curl (100% sukses tanpa kendala).
+
+File yang Diubah:
+- "frontend/src/utils/phoneUtils.ts"
+- "frontend/src/components/tabs/TabStoreInfo.tsx"
+- "frontend/src/components/modals/MandatoryStoreSetupModal.tsx"
+- "backend/services/placeholderHelper.ts"
+- "backend/config/configManager.ts"
+- "backend/routes/authRoutes.ts"
+- "admin-backend/utils/phoneUtils.ts"
+- "admin-backend/services/tenantService.ts"
+- "admin-frontend/src/components/modals/AddTenantModal.tsx"
+- "brain/LANGKAH_IMPLEMENTASI.md"
+- "brain/PROGRESS.md"
+
+Alasan Perubahan:
+Menghilangkan kebingungan pengguna akibat duplikasi tampilan kode negara pada form WhatsApp Owner (badge +62 berdampingan dengan angka 62 di input), serta memastikan data nomor telepon tersimpan dengan format resmi internasional negara (+62).
+
+Hasil:
+1. Kolom input WhatsApp Owner dan Admin CS kini hanya menampilkan nomor bersih '82173515807'.
+2. Pengguna yang mengetik atau paste '0821...' atau '62821...' otomatis diubah tampilannya menjadi '821...'.
+3. Database SQLite toko dan database master admin menyimpan nomor telepon dalam format resmi negara '+6282173515807'.
+4. Tautan vCard, WhatsApp link, dan bot Baileys tetap berfungsi normal tanpa hambatan.
+5. Lolos uji linting TypeScript dan kompilasi build 100%.
+
+Kendala:
+Tidak ada.
+
+---
+
+[33.0] - IMPLEMENTASI NOTIFIKASI TRANSAKSI PENJUALAN VIA TELEGRAM BOT & PORTAL KELOLA TELEGRAM MASTER ADMIN
+
+- Tanggal: 2026-11-10 21:58
+- Status: Completed
+Referensi LANGKAH_IMPLEMENTASI: 52.0
+
+Pekerjaan yang Dilakukan:
+1. Membangun Skema Database SQLite Per-Tenant untuk Telegram di `backend/database/tenantDbManager.ts`:
+   - Menambahkan pembuatan tabel `telegram_config` (`id`, `bot_token`, `chat_id`, `notif_enabled`, `admin_disabled`, `updated_at`) pada inisialisasi dan migrasi database tenant.
+2. Membangun Layanan Backend Telegram di `backend/services/telegramService.ts`:
+   - `getTelegramConfig` & `saveTelegramConfig` untuk membaca dan menyimpan konfigurasi per-tenant.
+   - `sendTelegramMessage` dengan integrasi aman ke Telegram Bot API (`https://api.telegram.org/bot<token>/sendMessage`) dengan mode non-blocking dan fallback teks polos jika parsing HTML gagal.
+   - `testTelegramConnection` untuk memverifikasi sambungan token dan chat ID secara instan.
+   - `notifyTransactionPaid` untuk mengirimkan notifikasi penjualan transaksi lunas/berhasil (Paid) lengkap dengan format rapi (Nama Toko, Nominal, Varian, ID Pesanan, dan Waktu).
+   - `notifyTransactionFailed` untuk mengirimkan notifikasi transaksi gagal, kadaluwarsa, atau dibatalkan (Cancel/Expired). Sesuai permintaan pengguna, pesanan berstatus Pending tidak dikirimkan ke Telegram.
+   - `sendAdminMessageToTelegram` untuk meneruskan pengumuman resmi Master Admin ke Telegram pemilik toko.
+3. Membangun Router Tenant di `backend/routes/telegramRoutes.ts`:
+   - `GET /api/bot/telegram/config`
+   - `POST /api/bot/telegram/config`
+   - `POST /api/bot/telegram/test`
+   - Mendaftarkannya di `backend/app.ts` pada path `/api/bot/telegram`.
+4. Menghubungkan Trigger Notifikasi Otomatis di `backend/services/transactionManager.ts`:
+   - Pada `updateTransactionStatus`, memicu `notifyTransactionPaid` saat `newStatus === 'paid'`.
+   - Memicu `notifyTransactionFailed` saat `newStatus === 'cancel'`. Status `pending` tidak memicu notifikasi apapun.
+5. Membangun Layanan & Rute Master Admin:
+   - `admin-backend/services/telegramAdminService.ts`: Mengambil ringkasan tenant tanpa pernah mengekspos token dan chat ID (jaminan privasi penuh), fitur toggle matikan/hidupkan bot per-tenant, serta pengiriman pesan resmi admin ke Telegram owner.
+   - `admin-backend/routes/telegramAdminRoutes.ts`: Menyediakan endpoint `GET /api/admin/telegram/tenants`, `POST /api/admin/telegram/tenants/:id/toggle`, dan `POST /api/admin/telegram/tenants/:id/send-message`.
+   - Mendaftarkan router di `admin-backend/routes/adminRoutes.ts`.
+6. Membangun Antarmuka Tenant di `frontend/src/components/tabs/TabStoreInfo.tsx`:
+   - Seksi 4 khusus "Notifikasi Telegram Real-Time (Purchase Notice)".
+   - Toggle switcher aktif/nonaktif notifikasi Telegram.
+   - Kolom Bot Token (@BotFather) dengan tombol intip/sembunyikan token (Eye/EyeOff).
+   - Kolom Telegram Chat ID (@userinfobot) dengan panduan ringkas dan tautan langsung.
+   - Banner peringatan dinamis jika bot dinonaktifkan oleh Master Admin.
+   - Tombol "Tes Kirim Notifikasi" dan "Simpan Pengaturan Telegram".
+7. Membangun Antarmuka Master Admin di `admin-frontend`:
+   - `admin-frontend/src/components/layout/AdminSidebar.tsx`: Menambahkan menu navigasi "Bot Telegram" dengan ikon Send.
+   - `admin-frontend/src/components/modals/SendTelegramMessageModal.tsx`: Modal penulisan pesan pengumuman/informasi resmi admin ke Telegram owner tanpa memperlihatkan kredensial rahasia bot.
+   - `admin-frontend/src/components/dashboard/tabs/TabTelegramAdmin.tsx`: Halaman kelola bot Telegram memuat ringkasan metrik (Total Tenant, Bot Aktif, Dinonaktifkan Admin, Belum Dikonfigurasi), banner kebijakan privasi, filter status, tabel (ID Tenant, Nama Toko, Status Bot, Terakhir Diperbarui, dan Tombol Aksi: Kirim Pesan & Matikan/Aktifkan Bot).
+   - `admin-frontend/src/App.tsx`: Menghubungkan rendering tab telegram ke navigasi sidebar.
+8. Verifikasi dan Pengujian:
+   - Menguji endpoint `GET /api/admin/telegram/tenants` dan `POST /api/admin/telegram/tenants/:id/toggle` via curl.
+   - Menguji endpoint `GET /api/bot/telegram/config`.
+   - Menjalankan `compile_applet` dan `lint_applet` bersamaan (100% lulus, 0 error).
+
+File yang Diubah / Dibuat:
+- "backend/database/tenantDbManager.ts" - Migrasi tabel `telegram_config` di SQLite tenant.
+- "backend/services/telegramService.ts" - Service Telegram Bot API & formatting notifikasi.
+- "backend/routes/telegramRoutes.ts" - Rute API tenant Telegram.
+- "backend/app.ts" - Registrasi telegramRouter.
+- "backend/services/transactionManager.ts" - Trigger notifikasi otomatis paid & cancel.
+- "admin-backend/services/telegramAdminService.ts" - Service manajemen Telegram Master Admin.
+- "admin-backend/routes/telegramAdminRoutes.ts" - Rute API Master Admin Telegram.
+- "admin-backend/routes/adminRoutes.ts" - Registrasi telegramAdminRouter.
+- "frontend/src/components/tabs/TabStoreInfo.tsx" - Form konfigurasi Telegram di dashboard toko.
+- "admin-frontend/src/components/layout/AdminSidebar.tsx" - Menu sidebar Bot Telegram.
+- "admin-frontend/src/components/modals/SendTelegramMessageModal.tsx" - Modal kirim pesan admin ke Telegram.
+- "admin-frontend/src/components/dashboard/tabs/TabTelegramAdmin.tsx" - Halaman manajemen Telegram Master Admin.
+- "admin-frontend/src/App.tsx" - Integrasi tab Bot Telegram di dashboard admin.
+- "brain/LANGKAH_IMPLEMENTASI.md" - Entri [52.0] diperbarui menjadi Completed.
+- "brain/PROGRESS.md" - Entri [33.0] dicatat.
+
+Alasan Perubahan:
+Memenuhi permintaan pengembangan fitur SCHEDULE 21.0 dengan persyaratan khusus pengguna: notifikasi Telegram hanya dikirim untuk pesanan Berhasil dan Gagal (tidak saat pending), halaman manajemen bot Telegram di dashboard Master Admin dengan kemampuan menonaktifkan bot, perlindungan privasi mutlak (token & chat ID tidak pernah terlihat oleh admin), serta kemampuan Master Admin mengirimkan pesan pengumuman ke Telegram pemilik toko.
+
+Hasil:
+1. Notifikasi transaksi otomatis terkirim ke Telegram pemilik toko saat transaksi berstatus Berhasil (Paid) dan Gagal/Batal/Expired (Cancel), tanpa spam pada status Pending.
+2. Tenant dapat mengonfigurasi Bot Token dan Chat ID mereka sendiri, melakukan tes kirim notifikasi, dan mengaktifkan/menonaktifkan notifikasi secara mandiri.
+3. Master Admin memiliki halaman khusus untuk memantau status bot setiap tenant, menonaktifkan/mengaktifkan bot tenant, dan mengirimkan pesan resmi ke Telegram owner.
+4. Kredensial rahasia bot (token dan chat ID) terlindungi dan tidak dapat diintip oleh Master Admin.
+5. Seluruh kode lolos build dan linting TypeScript dengan sempurna.
+
+Kendala:
+Tidak ada.
+
+---
+
+[34.0] - RELOKASI PENGATURAN TELEGRAM KE HALAMAN CONNECTION & PENYEMPURNAAN TABEL MASTER ADMIN (KOLOM KIRIM PESAN, TOGGLE ON/OFF, 4 STATUS BOT)
+
+- Tanggal: 2026-11-11 00:10
+- Status: Completed
+Referensi LANGKAH_IMPLEMENTASI: 53.0
+
+Pekerjaan yang Dilakukan:
+1. Merelokasi Pengaturan Telegram dari Info Profil ke Halaman Connection:
+   - Menghapus Seksi 4 Telegram beserta seluruh state dan handler terkait dari `frontend/src/components/tabs/TabStoreInfo.tsx`.
+   - Mengintegrasikan kartu "Koneksi Bot Telegram (Purchase Notice)" ke `frontend/src/components/tabs/TabConnectionDedicated.tsx` di atas Live Socket Terminal, lengkap dengan input Bot Token (@BotFather), Chat ID Telegram (@userinfobot), toggle aktif/nonaktif, tombol tes koneksi, tombol simpan, dan panduan 4 langkah ringkas.
+2. Memisahkan Kolom Kirim Pesan di Dashboard Master Admin (`TabTelegramAdmin.tsx`):
+   - Menambahkan kolom header dan data tersendiri "Kirim Pesan" dengan tombol aksi khusus untuk membuka modal penulisan pesan pengumuman/informasi resmi admin ke Telegram owner.
+3. Mengubah Aksi Menonaktifkan Bot Menjadi Sakelar On/Off (Toggle Switch):
+   - Pada kolom "Aksi Management", tombol teks sebelumnya diganti dengan komponen sakelar On/Off (Toggle Switch) yang interaktif, memiliki visual switch hijau (ON) / abu-abu (OFF), label status yang jelas, serta animasi transisi yang mulus.
+4. Menyelaraskan 4 Standar Status Bot Telegram:
+   - Nonaktif (badge abu-abu): bot belum di-set oleh tenant (`!isConfigured`).
+   - Online (badge hijau): bot terhubung (`isConfigured && notifEnabled && !adminDisabled`).
+   - Offline (badge abu-abu): bot dimatikan oleh tenant (`isConfigured && !notifEnabled && !adminDisabled`).
+   - Suspend (badge merah): bot dimatikan oleh admin (`adminDisabled`).
+   - Logika status ini juga telah diselaraskan pada `admin-backend/services/telegramAdminService.ts` dan filter tabs di admin frontend.
+5. Verifikasi dan Pengujian:
+   - Uji API endpoint `/api/admin/telegram/tenants` dan endpoint toggle via cURL (berjalan sempurna mengembalikan status `nonaktif` dan `suspend`).
+   - Verifikasi ganda `compile_applet` dan `lint_applet` (100% lulus, 0 error).
+   - Memastikan nol karakter em-dash di seluruh file.
+
+File yang Diubah:
+- "frontend/src/components/tabs/TabStoreInfo.tsx" - Pembersihan konfigurasi Telegram dari halaman Info Profil.
+- "frontend/src/components/tabs/TabConnectionDedicated.tsx" - Penempatan kartu pengaturan koneksi Telegram Bot di halaman Connection.
+- "backend/services/telegramService.ts" - Penyesuaian union type status bot.
+- "admin-backend/services/telegramAdminService.ts" - Penyesuaian pemetaan 4 status bot.
+- "admin-frontend/src/components/dashboard/tabs/TabTelegramAdmin.tsx" - Pemisahan kolom Kirim Pesan, sakelar toggle On/Off di Aksi Management, dan 4 badge status standar.
+- "brain/LANGKAH_IMPLEMENTASI.md" - Entri [53.0] diselesaikan.
+- "brain/PROGRESS.md" - Entri [34.0] dicatat.
+
+Alasan Perubahan:
+Memenuhi instruksi revisi pengguna agar konfigurasi Telegram diletakkan di halaman Connection, memisahkan tombol Kirim Pesan dari kolom aksi di tabel admin, menerapkan sakelar On/Off untuk menonaktifkan bot dari sisi admin, serta menstandarkan 4 jenis status bot (Nonaktif, Online, Offline, Suspend).
+
+Hasil:
+1. Halaman Info Profil kini bersih kembali dan fokus pada data identitas toko.
+2. Pengaturan bot Telegram tersaji rapi di halaman Connection di atas Live Socket Terminal.
+3. Tabel Master Admin kini memiliki kolom Kirim Pesan mandiri dan kolom Aksi Management berupa sakelar toggle switch On/Off.
+4. Keempat status bot (Nonaktif, Online, Offline, Suspend) terpetakan dengan tepat sesuai kondisi sebenarnya.
+5. Build dan linter TypeScript lulus tanpa kendala.
+
+Kendala:
+Tidak ada.
+
+---
+
+[35.0] - PERBAIKAN STABILITAS DEV SERVER, PENANGANAN CRASH PRE-WARMING & SOCKET ISOLATION
+
+- Tanggal: 2026-11-11 01:33
+- Status: Completed
+Referensi LANGKAH_IMPLEMENTASI: 54.0
+
+Pekerjaan yang Dilakukan:
+1. Memperbaiki Konfigurasi Port Socket Vite Middleware di `server.ts`:
+   - Menonaktifkan opsi HMR port independen (`hmr: { port: 24678 }` dan `hmr: { port: 24679 }`) menjadi `hmr: false` pada kedua instance Vite (Tenant dan Master Admin). Hal ini mencegah Vite membuka port WebSocket acak yang dilarang/diblokir oleh container runtime environment AI Studio.
+2. Mendukung Parsing Parameter CLI di `server.ts`:
+   - Menambahkan pembacaan argumen `--port` dari `process.argv` dengan fallback ke `process.env.PORT` atau default 3000, sehingga runner server AI Studio (`tsx server.ts --port 3000 --host 0.0.0.0`) terbaca dengan sempurna tanpa konflik.
+3. Menambahkan Global Exception Handlers:
+   - Memasang listener `process.on('uncaughtException')` dan `process.on('unhandledRejection')` di tingkat paling atas `server.ts` agar server Node.js tidak mati secara tiba-tiba jika terjadi disconnect socket atau timeout jaringan.
+4. Membungkus Eksekusi Background Cron Scheduler:
+   - Membungkus pemanggilan `startExpiryWarningScheduler()` dalam blok `try-catch` yang aman pada callback `serverApp.listen()`.
+5. Pengujian dan Verifikasi:
+   - Merestart dev server menggunakan `restart_dev_server`.
+   - Menguji endpoint kesehatan `/api/health` via cURL (merespon `HTTP 200 OK` dengan payload JSON valid).
+   - Menguji halaman Tenant `/` dan Master Admin `/admin/` (keduanya merespon `HTTP 200 OK`).
+   - Menjalankan `compile_applet` dan `lint_applet` bersamaan (100% lulus, 0 error).
+
+File yang Diubah:
+- "server.ts" - Perbaikan startup dev server, HMR false, penanganan argumen CLI, dan global exception handling.
+- "brain/LANGKAH_IMPLEMENTASI.md" - Entri [54.0] diselesaikan.
+- "brain/PROGRESS.md" - Entri [35.0] dicatat.
+
+Alasan Perubahan:
+Menyelesaikan error "Pre-warming failed: dev server process died" pada sistem runner environment AI Studio yang disebabkan oleh pembukaan port HMR tambahan dan ketiadaan error handler global pada proses server.
+
+Hasil:
+1. Dev server berjalan stabil di port 3000 tanpa crash saat pre-warming.
+2. Endpoint `/api/health`, dashboard toko (`/`), dan portal admin (`/admin/`) aktif dan dapat diakses dengan cepat.
+3. Kompilasi build dan validasi linting TypeScript lulus 100%.
+
+Kendala:
+Tidak ada.
+
+
+

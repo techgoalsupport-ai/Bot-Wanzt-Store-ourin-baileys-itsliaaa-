@@ -1,6 +1,7 @@
 import React, { useState, FormEvent } from 'react';
 import { Store, User, ShieldAlert, CheckCircle2, AlertCircle } from 'lucide-react';
 import { StoreInfoConfig } from '../../types/dashboard.types';
+import { toDisplayPhone, toOfficialPhone } from '../../utils/phoneUtils';
 
 interface MandatoryStoreSetupModalProps {
   initialStoreInfo?: StoreInfoConfig;
@@ -13,14 +14,7 @@ export const MandatoryStoreSetupModal: React.FC<MandatoryStoreSetupModalProps> =
 }) => {
   const [storeName, setStoreName] = useState(initialStoreInfo?.storeName || '');
   const [ownerName, setOwnerName] = useState(initialStoreInfo?.ownerName || '');
-  // Format nomor untuk input (hilangkan 62/0 jika ada agar konsisten dengan box bendera +62)
-  const rawNum = (initialStoreInfo?.ownerNumber || '').replace(/[^0-9]/g, '');
-  const displayNum = rawNum.startsWith('62')
-    ? rawNum.slice(2)
-    : rawNum.startsWith('0')
-    ? rawNum.slice(1)
-    : rawNum;
-  const [ownerNumber, setOwnerNumber] = useState(displayNum);
+  const [ownerNumber, setOwnerNumber] = useState(toDisplayPhone(initialStoreInfo?.ownerNumber));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +23,7 @@ export const MandatoryStoreSetupModal: React.FC<MandatoryStoreSetupModalProps> =
 
     const trimmedStoreName = storeName.trim();
     const trimmedOwnerName = ownerName.trim();
-    const cleanNumber = ownerNumber.replace(/[^0-9]/g, '');
+    const cleanNumber = toDisplayPhone(ownerNumber);
 
     if (!trimmedStoreName) {
       setError('Nama Toko wajib diisi.');
@@ -44,7 +38,7 @@ export const MandatoryStoreSetupModal: React.FC<MandatoryStoreSetupModalProps> =
       return;
     }
 
-    const fullOwnerNumber = '62' + (cleanNumber.startsWith('0') ? cleanNumber.slice(1) : cleanNumber);
+    const fullOwnerNumber = toOfficialPhone(cleanNumber);
 
     setLoading(true);
     setError(null);
@@ -173,8 +167,8 @@ export const MandatoryStoreSetupModal: React.FC<MandatoryStoreSetupModalProps> =
               <input
                 type="text"
                 required
-                value={ownerNumber}
-                onChange={(e) => setOwnerNumber(e.target.value.replace(/[^0-9]/g, ''))}
+                value={toDisplayPhone(ownerNumber)}
+                onChange={(e) => setOwnerNumber(toDisplayPhone(e.target.value))}
                 placeholder="82173515807"
                 disabled={loading}
                 className="w-full px-3 py-2.5 text-sm font-mono text-slate-900 placeholder-slate-400 focus:outline-none bg-transparent"

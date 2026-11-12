@@ -12,9 +12,10 @@ import {
   ExternalLink,
   RefreshCw,
   LayoutTemplate,
+  Send,
 } from 'lucide-react';
 
-export type AdminNavTab = 'units' | 'templates' | 'stats' | 'broadcast' | 'settings';
+export type AdminNavTab = 'units' | 'templates' | 'telegram' | 'stats' | 'broadcast' | 'settings';
 
 interface AdminSidebarProps {
   selectedTab: AdminNavTab;
@@ -63,6 +64,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       label: 'Template Message',
       icon: LayoutTemplate,
       description: 'Kelola template pesan bot',
+    },
+    {
+      id: 'telegram',
+      label: 'Bot Telegram',
+      icon: Send,
+      description: 'Manajemen bot Telegram tenant',
     },
     {
       id: 'stats',

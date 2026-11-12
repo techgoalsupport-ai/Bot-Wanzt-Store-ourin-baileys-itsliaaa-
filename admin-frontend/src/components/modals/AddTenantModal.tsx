@@ -75,8 +75,8 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
 
       if (creationMode === 'custom') {
         payload.store_name = newStoreName;
-        payload.owner_name = newOwnerName;
-        payload.owner_phone = newOwnerPhone;
+        const cleanDigits = newOwnerPhone.replace(/\D/g, '').replace(/^(62|0)/, '');
+        payload.owner_phone = cleanDigits ? `+62${cleanDigits}` : '';
         payload.username = newUsername;
         payload.password = newPassword;
       }
@@ -290,13 +290,19 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
 
                 <div>
                   <label className="block text-slate-700 mb-1 font-semibold">No. WhatsApp Pemilik (Opsional)</label>
-                  <input
-                    type="text"
-                    value={newOwnerPhone}
-                    onChange={(e) => setNewOwnerPhone(e.target.value.replace(/[^0-9]/g, ''))}
-                    placeholder="08123456789 (Kosongkan jika diisi penyewa)"
-                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#0084D1] focus:ring-2 focus:ring-[#0084D1]/20 font-mono"
-                  />
+                  <div className="relative flex rounded-xl border border-slate-300 focus-within:border-[#0084D1] focus-within:ring-2 focus-within:ring-[#0084D1]/20 transition bg-white overflow-hidden shadow-2xs">
+                    <div className="bg-slate-50 px-2.5 py-2 flex items-center gap-1 text-slate-700 border-r border-slate-200 text-xs font-mono select-none">
+                      <span>🇮🇩</span>
+                      <span>+62</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={newOwnerPhone.replace(/\D/g, '').replace(/^(62|0)/, '')}
+                      onChange={(e) => setNewOwnerPhone(e.target.value.replace(/\D/g, '').replace(/^(62|0)/, ''))}
+                      placeholder="8123456789 (Kosongkan jika diisi penyewa)"
+                      className="w-full bg-white px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none font-mono"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

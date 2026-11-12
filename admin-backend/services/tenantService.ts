@@ -258,6 +258,7 @@ export class TenantService {
   static updateStoreInfo(tenantId: string, storeName: string, ownerName: string, ownerPhone: string): boolean {
     try {
       const db = getMasterDb();
+      const normalizedPhone = normalizeIndonesianPhone(ownerPhone);
       const result = db.prepare(`
         UPDATE tenants
         SET store_name = ?, owner_name = ?, owner_phone = ?
@@ -265,7 +266,7 @@ export class TenantService {
       `).run(
         storeName ? storeName.trim() : '',
         ownerName ? ownerName.trim() : '',
-        ownerPhone ? ownerPhone.trim() : '',
+        normalizedPhone,
         tenantId
       );
       return result.changes > 0;

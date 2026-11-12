@@ -39,6 +39,14 @@ export function normalizeIndonesianPhone(raw: string | number | undefined | null
 }
 
 /**
+ * Normalisasi nomor telepon Indonesia menjadi format resmi negara berawalan '+' (contoh: +6282173515807)
+ */
+export function toOfficialIndonesianPhone(raw: string | number | undefined | null): string {
+  const clean = normalizeIndonesianPhone(raw);
+  return clean ? `+${clean}` : '';
+}
+
+/**
  * Menggantikan seluruh placeholder dinamis dari data Store Info, Varian Produk, dan Transaksi Invoice.
  * Kompatibel dengan semua jenis output teks, tombol, maupun footer di seluruh command.
  */

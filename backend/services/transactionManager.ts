@@ -1,4 +1,6 @@
 import { db } from '../database/sqlite.ts';
+import { getActiveTenantId } from '../database/tenantContext.ts';
+import { notifyTransactionPaid, notifyTransactionFailed } from './telegramService.ts';
 
 export interface TransactionRecord {
   id: string;
@@ -237,6 +239,38 @@ export function updateTransactionStatus(
       SET status = ?, updated_at = ?
       WHERE id = ?
     `).run(newStatus, now, existing.id);
+
+    // Trigger Notifikasi Telegram untuk pesanan Berhasil (Paid) atau Gagal (Cancel/Expired)
+    try {
+      const tenantId = getActiveTenantId() || 't_wanzt';
+      let storeName = 'Toko Anda';
+      try {
+        const storeRow = db.prepare('SELECT store_name FROM store_info WHERE id = 1').get() as any;
+        if (storeRow?.store_name) storeName = storeRow.store_name;
+      } catch {}
+
+      if (newStatus === 'paid' && existing.status !== 'paid') {
+        notifyTransactionPaid(tenantId, {
+          orderId: existing.order_id,
+          productName: existing.product_name,
+          variantName: existing.variant_name,
+          totalPrice: existing.total,
+          buyerNumber: existing.customer_number,
+          storeName,
+        }).catch((err) => console.error('[TelegramNotif] Error kirim paid:', err));
+      } else if (newStatus === 'cancel' && existing.status === 'pending') {
+        notifyTransactionFailed(tenantId, {
+          orderId: existing.order_id,
+          productName: existing.product_name,
+          variantName: existing.variant_name,
+          totalPrice: existing.total,
+          reason: 'Batas waktu pembayaran habis / dibatalkan',
+          storeName,
+        }).catch((err) => console.error('[TelegramNotif] Error kirim failed:', err));
+      }
+    } catch (notifErr) {
+      console.error('[TelegramNotif] Error trigger:', notifErr);
+    }
 
     return {
       ...mapRowToRecord(existing),

@@ -14,6 +14,7 @@ import {
 } from '../types/bot.types.ts';
 import { getActiveTenantId } from '../database/tenantContext.ts';
 import { TenantManager } from '../../admin-backend/services/tenantManager.ts';
+import { toOfficialIndonesianPhone } from '../services/placeholderHelper.ts';
 
 function resolveDbDir(): string {
   const localDb = path.join(process.cwd(), 'database');
@@ -221,6 +222,15 @@ export function loadStoreInfo(): StoreInfoConfig {
 export function saveStoreInfo(update: Partial<StoreInfoConfig>): StoreInfoConfig {
   const current = loadStoreInfo();
   const merged = { ...current, ...update };
+  
+  // Normalisasi nomor telepon ke format resmi negara (+62)
+  if (merged.ownerNumber) {
+    merged.ownerNumber = toOfficialIndonesianPhone(merged.ownerNumber);
+  }
+  if (merged.adminNumber) {
+    merged.adminNumber = toOfficialIndonesianPhone(merged.adminNumber);
+  }
+
   const now = new Date().toISOString();
 
   try {

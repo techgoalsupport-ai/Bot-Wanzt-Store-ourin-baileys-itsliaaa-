@@ -159,6 +159,27 @@ export function migrateTenantDb(db: Database.Database): void {
       try { db.exec("ALTER TABLE transactions ADD COLUMN trx_id TEXT"); } catch {}
     }
   }
+
+  // 7. Migrasi telegram_config
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS telegram_config (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        bot_token TEXT DEFAULT '',
+        chat_id TEXT DEFAULT '',
+        notif_enabled INTEGER DEFAULT 0,
+        admin_disabled INTEGER DEFAULT 0,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    const teleRow = db.prepare('SELECT id FROM telegram_config WHERE id = 1').get();
+    if (!teleRow) {
+      db.prepare(`
+        INSERT INTO telegram_config (id, bot_token, chat_id, notif_enabled, admin_disabled, updated_at)
+        VALUES (1, '', '', 0, 0, datetime('now'))
+      `).run();
+    }
+  } catch {}
 }
 
 /**
@@ -342,6 +363,30 @@ export function initTenantDbTables(db: Database.Database, tenantId: string): voi
     CREATE INDEX IF NOT EXISTS idx_promo_code ON promo_codes(code);
     CREATE INDEX IF NOT EXISTS idx_promo_variants ON promo_code_variants(promo_id);
   `);
+
+  // 10. Tabel Konfigurasi Notifikasi Telegram Bot
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS telegram_config (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      bot_token TEXT DEFAULT '',
+      chat_id TEXT DEFAULT '',
+      notif_enabled INTEGER DEFAULT 0,
+      admin_disabled INTEGER DEFAULT 0,
+      updated_at TEXT NOT NULL
+    );
+  `);
+
+  try {
+    const teleRow = db.prepare('SELECT id FROM telegram_config WHERE id = 1').get();
+    if (!teleRow) {
+      db.prepare(`
+        INSERT INTO telegram_config (id, bot_token, chat_id, notif_enabled, admin_disabled, updated_at)
+        VALUES (1, '', '', 0, 0, ?)
+      `).run(now);
+    }
+  } catch (err) {
+    console.error('[Tenant DB] Error inisialisasi telegram_config:', err);
+  }
 
   // Seed data awal dari master.db jika ada data penyewa unit apartemen
   try {

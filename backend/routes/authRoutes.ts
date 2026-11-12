@@ -13,6 +13,7 @@ import { impersonationTokens } from '../../admin-backend/routes/adminRoutes.ts';
 import { TenantManager } from '../../admin-backend/services/tenantManager.ts';
 import { saveStoreInfo, loadStoreInfo } from '../config/configManager.ts';
 import { botManager } from '../botManager.ts';
+import { toOfficialIndonesianPhone } from '../services/placeholderHelper.ts';
 
 export const authRouter = Router();
 
@@ -116,11 +117,11 @@ authRouter.post('/store-setup', (req: Request, res: Response) => {
       });
     }
 
-    const cleanOwnerNumber = ownerNumber.trim().replace(/[^0-9]/g, '');
+    const officialOwnerNumber = toOfficialIndonesianPhone(ownerNumber);
     const updated = saveStoreInfo({
       storeName: storeName.trim(),
       ownerName: ownerName.trim(),
-      ownerNumber: cleanOwnerNumber,
+      ownerNumber: officialOwnerNumber,
     });
 
     // Sinkronkan ke master.db milik Master Admin
@@ -130,7 +131,7 @@ authRouter.post('/store-setup', (req: Request, res: Response) => {
       tenantId,
       storeName.trim(),
       ownerName.trim(),
-      cleanOwnerNumber
+      officialOwnerNumber
     );
 
     botManager.saveConfig({

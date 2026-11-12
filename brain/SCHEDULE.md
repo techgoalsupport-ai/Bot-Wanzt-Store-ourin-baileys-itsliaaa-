@@ -742,7 +742,7 @@ Owner toko mendapatkan notifikasi tepat waktu sebelum bot mereka kedaluwarsa, pe
 [21.0] - FITUR NOTIFIKASI TRANSAKSI PENJUALAN REAL-TIME VIA TELEGRAM BOT (PURCHASE NOTICE)
 
 - Tanggal: 2026-11-04 18:45
-- Status: Planned
+- Status: Completed
 
 Tujuan:
 Menyediakan integrasi notifikasi real-time ke akun atau grup Telegram milik owner toko setiap kali ada transaksi penjualan, sehingga owner dan tim dapat memantau pesanan masuk secara instan tanpa mengganggu obrolan di WhatsApp.

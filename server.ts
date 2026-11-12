@@ -8,17 +8,32 @@ import { startExpiryWarningScheduler } from './backend/services/expiryWarningSer
 
 const __dirname = import.meta.dirname;
 
+// Tangani unhandled rejection dan uncaught exception agar proses server tidak mati mendadak
+process.on('uncaughtException', (err) => {
+  console.error('[Wanzt Store] Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Wanzt Store] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 async function startServer() {
-  const PORT = parseInt(process.env.PORT || '3000', 10);
+  let PORT = parseInt(process.env.PORT || '3000', 10);
+  const portArgIndex = process.argv.indexOf('--port');
+  if (portArgIndex !== -1 && process.argv[portArgIndex + 1]) {
+    const parsed = parseInt(process.argv[portArgIndex + 1], 10);
+    if (!isNaN(parsed)) PORT = parsed;
+  }
+
   const isProduction = process.env.NODE_ENV === 'production';
 
   if (!isProduction) {
     // Mode Development: Inisialisasi Vite dev server untuk Tenant (frontend) dan Master Admin (admin-frontend)
+    // HMR dinonaktifkan (hmr: false) sesuai batasan runtime environment agar tidak membuka port socket liar
     const viteTenant = await createViteServer({
       root: path.resolve(__dirname, 'frontend'),
       server: {
         middlewareMode: true,
-        hmr: { port: 24678 },
+        hmr: false,
       },
       appType: 'spa',
     });
@@ -29,7 +44,7 @@ async function startServer() {
       configFile: path.resolve(__dirname, 'admin-frontend', 'vite.config.ts'),
       server: {
         middlewareMode: true,
-        hmr: { port: 24679 },
+        hmr: false,
       },
       appType: 'spa',
     });
@@ -85,7 +100,11 @@ async function startServer() {
   serverApp.listen(PORT, '0.0.0.0', () => {
     console.log(`[Wanzt Store] Server berjalan di http://0.0.0.0:${PORT}`);
     console.log(`[Wanzt Store] Mode: ${isProduction ? 'Production' : 'Development'}`);
-    startExpiryWarningScheduler();
+    try {
+      startExpiryWarningScheduler();
+    } catch (schedErr) {
+      console.error('[Wanzt Store] Gagal memulai scheduler masa sewa:', schedErr);
+    }
   });
 }
 

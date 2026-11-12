@@ -1,4 +1,4 @@
-import React, { FormEvent } from 'react';
+import React, { FormEvent, useState, useEffect } from 'react';
 import {
   Smartphone,
   CheckCircle2,
@@ -15,6 +15,13 @@ import {
   Wifi,
   Radio,
   Terminal,
+  Send,
+  Eye,
+  EyeOff,
+  ExternalLink,
+  Info,
+  Save,
+  RefreshCw,
 } from 'lucide-react';
 import { BotStatusResponse } from '../../types/dashboard.types';
 import { LiveTerminal } from '../terminal/LiveTerminal';
@@ -48,6 +55,83 @@ export const TabConnectionDedicated: React.FC<TabConnectionDedicatedProps> = ({
   onCopyCode,
   showToast,
 }) => {
+  // State Konfigurasi Notifikasi Telegram Bot
+  const [telegramConfig, setTelegramConfig] = useState({
+    botToken: '',
+    chatId: '',
+    notifEnabled: false,
+    adminDisabled: false,
+    isConfigured: false,
+  });
+  const [isTestingTelegram, setIsTestingTelegram] = useState(false);
+  const [showBotToken, setShowBotToken] = useState(false);
+  const [isSavingTelegram, setIsSavingTelegram] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/bot/telegram/config')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.config) {
+          setTelegramConfig(data.config);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveTelegram = async () => {
+    setIsSavingTelegram(true);
+    try {
+      const res = await fetch('/api/bot/telegram/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          botToken: telegramConfig.botToken,
+          chatId: telegramConfig.chatId,
+          notifEnabled: telegramConfig.notifEnabled,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTelegramConfig(data.config);
+        showToast('Pengaturan notifikasi Telegram berhasil disimpan!');
+      } else {
+        showToast('Gagal menyimpan Telegram: ' + (data.error || 'Server error'));
+      }
+    } catch (err: any) {
+      showToast('Error koneksi: ' + err.message);
+    } finally {
+      setIsSavingTelegram(false);
+    }
+  };
+
+  const handleTestTelegram = async () => {
+    if (!telegramConfig.botToken || !telegramConfig.chatId) {
+      showToast('Isi Bot Token dan Chat ID Telegram terlebih dahulu!');
+      return;
+    }
+    setIsTestingTelegram(true);
+    try {
+      const res = await fetch('/api/bot/telegram/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          botToken: telegramConfig.botToken,
+          chatId: telegramConfig.chatId,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || 'Pesan tes berhasil terkirim ke Telegram!');
+      } else {
+        showToast('Gagal tes Telegram: ' + (data.error || 'Periksa token & chat ID'));
+      }
+    } catch (err: any) {
+      showToast('Error koneksi: ' + err.message);
+    } finally {
+      setIsTestingTelegram(false);
+    }
+  };
+
   const trimmedCode = customCode.trim().toUpperCase();
   const isEmpty = trimmedCode.length === 0;
   const hasSymbol = /[^A-Z0-9]/.test(trimmedCode);
@@ -489,6 +573,160 @@ export const TabConnectionDedicated: React.FC<TabConnectionDedicatedProps> = ({
               </ol>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* 2. KONEKSI NOTIFIKASI TRANSAKSI TELEGRAM BOT (PURCHASE NOTICE) */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center text-sky-600 border border-sky-100">
+              <Send className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                Koneksi Bot Telegram
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-sky-50 text-sky-600 border border-sky-200">
+                  Bot API
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-500">
+                Kirim notifikasi otomatis instan ke akun atau grup Telegram saat transaksi Berhasil (Paid) atau Gagal (Cancel/Expired).
+              </p>
+            </div>
+          </div>
+
+          {/* Toggle Switcher */}
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={telegramConfig.notifEnabled}
+              onChange={(e) => setTelegramConfig({ ...telegramConfig, notifEnabled: e.target.checked })}
+              className="sr-only peer"
+            />
+            <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-sky-500"></div>
+          </label>
+        </div>
+
+        {/* Peringatan jika dinonaktifkan oleh master admin */}
+        {telegramConfig.adminDisabled && (
+          <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-800">
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold">Notifikasi Telegram Dinonaktifkan oleh Master Admin (Suspend)</p>
+              <p className="text-[11px] text-rose-700 mt-0.5">
+                Akses notifikasi bot Telegram untuk unit toko Anda sementara waktu dinonaktifkan oleh administrator sistem.
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Input Bot Token */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+              <span>Bot Token Telegram</span>
+              <a
+                href="https://t.me/BotFather"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[10px] text-sky-600 hover:underline flex items-center gap-0.5"
+              >
+                Dapatkan di @BotFather <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            </label>
+            <div className="relative flex rounded-xl border border-slate-300 focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20 transition bg-white overflow-hidden shadow-2xs">
+              <input
+                type={showBotToken ? 'text' : 'password'}
+                value={telegramConfig.botToken}
+                onChange={(e) => setTelegramConfig({ ...telegramConfig, botToken: e.target.value })}
+                placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+                className="w-full px-3 py-2.5 text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowBotToken(!showBotToken)}
+                className="px-3 py-2.5 text-slate-400 hover:text-slate-600 transition"
+              >
+                {showBotToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-500">
+              Token rahasia dari bot yang Anda buat di BotFather.
+            </p>
+          </div>
+
+          {/* Input Chat ID */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+              <span>Telegram Chat ID</span>
+              <a
+                href="https://t.me/userinfobot"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[10px] text-sky-600 hover:underline flex items-center gap-0.5"
+              >
+                Cek di @userinfobot <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            </label>
+            <div className="relative flex rounded-xl border border-slate-300 focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20 transition bg-white overflow-hidden shadow-2xs">
+              <input
+                type="text"
+                value={telegramConfig.chatId}
+                onChange={(e) => setTelegramConfig({ ...telegramConfig, chatId: e.target.value })}
+                placeholder="Contoh: 123456789 atau -100123456789"
+                className="w-full px-3 py-2.5 text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none"
+              />
+            </div>
+            <p className="text-[10px] text-slate-500">
+              ID akun pengguna atau ID grup tujuan notifikasi (gunakan awalan minus untuk grup).
+            </p>
+          </div>
+        </div>
+
+        {/* Panduan Ringkas Cara Setup */}
+        <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1.5 text-slate-600 text-[11px]">
+          <div className="font-bold text-slate-700 flex items-center gap-1.5">
+            <Info className="w-3.5 h-3.5 text-sky-600" />
+            Cara Menghubungkan Notifikasi Telegram:
+          </div>
+          <ol className="list-decimal list-inside space-y-0.5 pl-1 text-[11px] text-slate-600">
+            <li>Buka Telegram, cari <span className="font-semibold text-slate-800">@BotFather</span> dan ketik <code className="bg-slate-200 px-1 py-0.2 rounded text-[10px]">/newbot</code> untuk membuat bot baru.</li>
+            <li>Salin token API bot yang diberikan oleh BotFather dan tempel ke kolom <b>Bot Token Telegram</b>.</li>
+            <li>Kirim pesan <b>/start</b> ke bot Anda, lalu dapatkan ID Anda via <span className="font-semibold text-slate-800">@userinfobot</span> dan tempel ke kolom <b>Chat ID</b>.</li>
+            <li>Klik tombol <b>Tes Kirim Notifikasi</b> untuk memverifikasi sambungan sebelum menyalakan toggle.</li>
+          </ol>
+        </div>
+
+        {/* Tombol Aksi Telegram */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+          <button
+            type="button"
+            disabled={isTestingTelegram || !telegramConfig.botToken || !telegramConfig.chatId}
+            onClick={handleTestTelegram}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition active:scale-[0.98] disabled:opacity-40 cursor-pointer"
+          >
+            {isTestingTelegram ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Send className="w-3.5 h-3.5 text-sky-600" />
+            )}
+            <span>Tes Kirim Notifikasi</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={isSavingTelegram}
+            onClick={handleSaveTelegram}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition shadow-xs active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+          >
+            {isSavingTelegram ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Save className="w-3.5 h-3.5" />
+            )}
+            <span>Simpan Pengaturan Telegram</span>
+          </button>
         </div>
       </div>
 
