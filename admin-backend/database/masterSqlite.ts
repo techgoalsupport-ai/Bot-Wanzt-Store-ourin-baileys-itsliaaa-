@@ -111,6 +111,58 @@ export function initMasterDatabase(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_extension_tokens_status ON extension_tokens (status);
   `);
 
+  // Tabel API Key Kolaborator / Partner Reseller
+  masterDb.exec(`
+    CREATE TABLE IF NOT EXISTS collaborator_api_keys (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      api_key_hash TEXT UNIQUE NOT NULL,
+      prefix_key TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      last_used_at TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_collaborator_keys_hash ON collaborator_api_keys (api_key_hash);
+    CREATE INDEX IF NOT EXISTS idx_collaborator_keys_status ON collaborator_api_keys (status);
+  `);
+
+  // Tabel Log Aktivitas Partner API
+  masterDb.exec(`
+    CREATE TABLE IF NOT EXISTS collaborator_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      collaborator_id INTEGER NOT NULL,
+      collaborator_name TEXT NOT NULL,
+      action_type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      duration_label TEXT NOT NULL,
+      request_ip TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_collaborator_logs_collab ON collaborator_logs (collaborator_id);
+  `);
+
+  // Tabel Daftar Kontak Master Admin beserta bobot probabilitas rujukan
+  masterDb.exec(`
+    CREATE TABLE IF NOT EXISTS master_admins (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      weight INTEGER NOT NULL DEFAULT 100,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+
+  const masterAdminCount = (masterDb.prepare('SELECT COUNT(*) as count FROM master_admins').get() as { count: number }).count;
+  if (masterAdminCount === 0) {
+    const nowIso = new Date().toISOString();
+    masterDb.prepare(`
+      INSERT INTO master_admins (name, phone, weight, sort_order, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run('Master Admin Utama', '+6285712439395', 100, 0, nowIso, nowIso);
+  }
+
   // Seed default super admin jika kosong
   const adminCount = (masterDb.prepare('SELECT COUNT(*) as count FROM super_admins').get() as { count: number }).count;
   if (adminCount === 0) {
@@ -220,7 +272,7 @@ export function initMasterDatabase(): Database.Database {
     insertTemplate.run(
       'Instruksi Input Kupon Promo',
       'confirm_promo_input',
-      '🎟️ *MASUKKAN KODE PROMO*\nSilakan ketik kode promo Anda (contoh: HEMAT10) atau ketik *BATAL* untuk melanjutkan dengan harga normal.\n\n⏱️ _Batas waktu: 90 detik._',
+      '🎟️ *MASUKKAN KODE PROMO*\nSilakan ketik kode promo Anda (contoh: HEMAT10) atau ketik *BATAL* untuk melanjutkan dengan harga normal.\n\n⏱️ _Batas waktu: 3 menit._',
       now,
       now
     );
@@ -260,10 +312,14 @@ export function initMasterDatabase(): Database.Database {
       insertTemplate.run(
         'Instruksi Input Kupon Promo',
         'confirm_promo_input',
-        '🎟️ *MASUKKAN KODE PROMO*\nSilakan ketik kode promo Anda (contoh: HEMAT10) atau ketik *BATAL* untuk melanjutkan dengan harga normal.\n\n⏱️ _Batas waktu: 90 detik._',
+        '🎟️ *MASUKKAN KODE PROMO*\nSilakan ketik kode promo Anda (contoh: HEMAT10) atau ketik *BATAL* untuk melanjutkan dengan harga normal.\n\n⏱️ _Batas waktu: 3 menit._',
         now,
         now
       );
+    } else {
+      masterDb
+        .prepare("UPDATE message_templates SET content = REPLACE(content, '90 detik', '3 menit') WHERE category = 'confirm_promo_input' AND content LIKE '%90 detik%'")
+        .run();
     }
 
     const hasPromoValid = (masterDb.prepare("SELECT COUNT(*) as count FROM message_templates WHERE category = 'confirm_promo_valid'").get() as { count: number }).count;

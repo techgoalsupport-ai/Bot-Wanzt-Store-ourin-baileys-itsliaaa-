@@ -62,3 +62,44 @@ export function setGroupToggle(groupId: string, enabled: boolean): Record<string
     return loadGroupsConfig();
   }
 }
+
+function ensureBotSettingsTable(): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bot_settings (
+      setting_key TEXT PRIMARY KEY,
+      setting_value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+}
+
+export function loadGroupOnlySetting(): boolean {
+  try {
+    ensureBotSettingsTable();
+    const row = db
+      .prepare('SELECT setting_value FROM bot_settings WHERE setting_key = ?')
+      .get('group_only') as { setting_value: string } | undefined;
+    if (!row) return false; // Default OFF sesuai kesepakatan
+    return row.setting_value === '1' || row.setting_value === 'true';
+  } catch (err) {
+    console.error('Gagal membaca pengaturan group_only dari SQLite:', err);
+    return false;
+  }
+}
+
+export function saveGroupOnlySetting(enabled: boolean): boolean {
+  try {
+    ensureBotSettingsTable();
+    const now = new Date().toISOString();
+    const val = enabled ? '1' : '0';
+    db.prepare(`
+      INSERT OR REPLACE INTO bot_settings (setting_key, setting_value, updated_at)
+      VALUES ('group_only', ?, ?)
+    `).run(val, now);
+    return Boolean(enabled);
+  } catch (err) {
+    console.error('Gagal menyimpan pengaturan group_only ke SQLite:', err);
+    return false;
+  }
+}
+

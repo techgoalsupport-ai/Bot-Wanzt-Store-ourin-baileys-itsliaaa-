@@ -1427,3 +1427,44 @@ Potensi Penerapan:
 
 Catatan Tambahan:
 - Wajib mematuhi larangan karakter em-dash (-) dan en-dash (-).
+
+---
+
+[23.0] - ANALISIS @ITSLIAAA/BAILEYS & REPOSITORY STARSEED UNTUK IMPLEMENTASI FITUR HIDE TAG
+
+- Tanggal: 2026-11-12 22:03
+- Sumber:
+  * Package terpasang: `@itsliaaa/baileys` (`v0.3.18-final`, `node_modules/@itsliaaa/baileys/`)
+  * Repository referensi: `https://github.com/itsliaaa/starseed` (`plugins/admin tools/mentions.js`, `lib/Listener.js`, `lib/Serialize.js`)
+
+Informasi yang Dipelajari:
+1. Cara Kerja Mention & Hide Tag di `@itsliaaa/baileys`:
+   - Pada `lib/Utils/messages.js` (baris 1281-1300), `sock.sendMessage(jid, content)` mendukung dua mekanisme mention:
+     a) `mentions: string[]`: Mengisi `contextInfo.mentionedJid`. Jika daftar JID seluruh anggota grup dimasukkan ke `mentions` tanpa menulis `@nomor` di dalam `text`/`caption`, pesan tampil bersih tanpa teks tag namun memicu notifikasi mention tersembunyi ke seluruh anggota grup (teknik standar Hide Tag). Mendukung pesan teks biasa maupun media (`image`, `video`, `document`, dll.).
+     b) `mentionAll: true`: Fitur tambahan di fork `@itsliaaa/baileys` yang mengisi `contextInfo.nonJidMentions = 1` (digunakan untuk sintaks `@all` native WhatsApp).
+   - Catatan keandalan: `mentions: participantJids` via `groupMetadata` bekerja konsisten di seluruh versi client WhatsApp (Android, iOS, Desktop/Web) untuk keperluan Hide Tag murni tanpa mengharuskan teks `@all`, sementara `nonJidMentions` bergantung pada dukungan client penerima terhadap fitur `@all`.
+2. Struktur `groupMetadata` dan Addressing Mode (PN vs LID) di `@itsliaaa/baileys`:
+   - Pada `lib/Socket/groups.js` (`extractGroupMetadata`, baris 334-343), setiap item `participant` dalam `await sock.groupMetadata(groupJid)` memiliki properti:
+     * `id`: JID utama (bisa berformat `@lid` jika `addressingMode === 'lid'`, atau `@s.whatsapp.net`)
+     * `phoneNumber`: JID nomor telepon `@s.whatsapp.net` (tersedia bila `id` berformat `@lid`)
+     * `lid`: JID LID `@lid` (tersedia bila `id` berformat `@s.whatsapp.net`)
+     * `admin`: `'admin' | 'superadmin' | null`
+   - Pada pesan masuk (`m.key`), pengirim di grup mode LID sering muncul dengan `m.key.participant` berformat `@lid` dan `m.key.participantAlt` berformat `@s.whatsapp.net`. Oleh karena itu, validasi apakah pengirim adalah Admin Grup wajib mencocokkan ID pengirim (`participant` maupun `participantAlt`) terhadap ketiga field (`p.id`, `p.lid`, `p.phoneNumber`), bukan hanya `p.id` saja.
+3. Implementasi di Repository `itsliaaa/starseed`:
+   - File `plugins/admin tools/mentions.js` mendaftarkan command `['everyone', 'hidetag', 'tagall', 'totag']` dengan guard `group: true` dan `admin: true`.
+   - Mengambil pesan target dari argumen setelah command (`text`) atau fallback ke pesan yang di-reply (`m.quoted`), serta mendukung pengiriman ulang media (gambar, video, audio, stiker) jika pesan target mengandung `mimetype`.
+   - File `lib/Listener.js` (baris 220-265) melakukan cache `groupMetadata` dan memeriksa flag `participant.admin` terhadap `m.sender` dan `m.senderLid`.
+4. Kondisi Kode Saat Ini di `backend/handlers/messageDispatcher.ts`:
+   - Command grup sudah terfilter whitelist (`loadGroupsConfig()`) di baris 415-423 dan sudah memisahkan prefix (`ALLOWED_PREFIXES`) serta `commandName` dan `commandArg` di baris 1251-1265.
+   - Daftar `reservedWords` di baris 1353 belum mencakup `hidetag`, `ht`, `h`. Akibatnya, command tersebut saat ini akan dianggap sebagai nama produk dan memicu pencarian carousel produk.
+
+Pemahaman:
+- Untuk membangun fitur Hide Tag (`hidetag`, `h`, `ht`) yang handal di proyek ini, kita dapat langsung memanfaatkan `sock.groupMetadata(remoteJid)` dan `sock.sendMessage(remoteJid, { text, mentions })` bawaan `@itsliaaa/baileys`, tanpa perlu memasang library tambahan.
+- Validasi `isGroupAdmin` wajib mendukung pencocokan ganda (`@lid` dan `@s.whatsapp.net`) agar tidak gagal menolak admin asli pada grup WhatsApp yang sudah memakai mode LID.
+- Menolak command jika dikirim di chat pribadi (DM) atau oleh anggota non-admin grup, dan memastikan kata kunci `hidetag`, `ht`, `h` didaftarkan ke handler khusus serta `reservedWords` agar tidak salah dianggap sebagai permintaan katalog produk.
+
+Potensi Penerapan:
+1. Menambahkan helper `isGroupAdmin` & `extractGroupParticipantJids` berbasis `sock.groupMetadata` (dengan cache ringan dan penanganan PN/LID).
+2. Menambahkan handler command `hidetag`, `h`, `ht` di `backend/handlers/messageDispatcher.ts` (mendukung teks langsung maupun pesan/media yang di-reply, khusus grup, khusus admin grup).
+3. Opsional untuk didiskusikan dengan pengguna: apakah perlu tombol toggle/pengaturan fitur Hide Tag di Dashboard Bot serta teks balasan jika bukan admin atau pesan kosong.
+

@@ -7,7 +7,7 @@ import { sendProductVariantsCarousel } from '../messages/carouselMessage.ts';
 import { sendAdminContactMessage, sendOwnerContactMessage, sendInvoiceAdminContactMessage } from '../messages/adminContactMessage.ts';
 import { isKnownProduct, checkXavieraBalance, DEFAULT_CATALOG } from '../services/xavieraService.ts';
 import { resolvePlaceholders, normalizeIndonesianPhone } from '../services/placeholderHelper.ts';
-import { loadGroupsConfig } from '../services/groupService.ts';
+import { loadGroupsConfig, loadGroupOnlySetting } from '../services/groupService.ts';
 import { createLunasQrisTransaction, startLunasQrisPolling } from '../services/lunasQrisService.ts';
 import { recordTransaction, updateTransactionStatus } from '../services/transactionManager.ts';
 import {
@@ -28,6 +28,13 @@ import {
 import { getPricingConfig, validateAndApplyPromo, db } from '../database/sqlite.ts';
 import QRCode from 'qrcode';
 import axios from 'axios';
+import { handleHideTagCommand } from './hideTagHandler.ts';
+import { extractTextFromWaMessage, isHideTagCommand } from './hideTagUtils.ts';
+import {
+  CHECKOUT_SESSION_TIMEOUT_MS,
+  shouldAllowIncomingInDispatcher,
+  buildInvoiceContactButtons,
+} from './dmFilterUtils.ts';
 
 export interface DispatcherDeps {
   addLog: (type: 'info' | 'success' | 'warning' | 'error' | 'code', msg: string) => void;
@@ -49,11 +56,11 @@ export interface CheckoutSession {
   initialMargin: number;
   variantId?: string;
   createdAt: number;
-  expiresAt: number; // 90 detik
+  expiresAt: number; // 3 menit
   waitingForPromo: boolean;
 }
 
-// Map untuk melacak sesi checkout aktif berbasis JID pembeli (timeout 90 detik)
+// Map untuk melacak sesi checkout aktif berbasis JID pembeli (timeout 3 menit)
 export const activeCheckoutSessions = new Map<string, CheckoutSession>();
 
 export interface ExecuteInvoiceParams {
@@ -317,24 +324,30 @@ export async function executeLunasQrisInvoice(params: ExecuteInvoiceParams): Pro
     orderId,
   });
 
-  const invoiceButtons = [
-    {
-      text: '📞 Hubungi Admin',
-      id: 'invoice_contact_admin',
-    },
-  ];
+  const invoiceButtons = buildInvoiceContactButtons(
+    config.storeInfo?.adminNumber,
+    config.storeInfo?.ownerNumber
+  );
 
   try {
     if (qrBuffer) {
-      try {
-        const invRes = await sock.sendMessage(senderJid, {
-          image: qrBuffer,
-          caption: invoiceCaption,
-          footer: invoiceFooter,
-          nativeFlow: invoiceButtons,
-        });
-        markMessageAsBotSent(invRes?.key?.id);
-      } catch {
+      if (invoiceButtons.length > 0) {
+        try {
+          const invRes = await sock.sendMessage(senderJid, {
+            image: qrBuffer,
+            caption: invoiceCaption,
+            footer: invoiceFooter,
+            nativeFlow: invoiceButtons,
+          });
+          markMessageAsBotSent(invRes?.key?.id);
+        } catch {
+          const invRes = await sock.sendMessage(senderJid, {
+            image: qrBuffer,
+            caption: `${invoiceCaption}\n\n*${invoiceFooter}*`,
+          });
+          markMessageAsBotSent(invRes?.key?.id);
+        }
+      } else {
         const invRes = await sock.sendMessage(senderJid, {
           image: qrBuffer,
           caption: `${invoiceCaption}\n\n*${invoiceFooter}*`,
@@ -342,11 +355,14 @@ export async function executeLunasQrisInvoice(params: ExecuteInvoiceParams): Pro
         markMessageAsBotSent(invRes?.key?.id);
       }
     } else {
-      const invRes = await sock.sendMessage(senderJid, {
+      const payload: any = {
         text: `${invoiceCaption}\n\n💳 Link Pembayaran: ${trxData.payment_url}`,
         footer: invoiceFooter,
-        nativeFlow: invoiceButtons,
-      });
+      };
+      if (invoiceButtons.length > 0) {
+        payload.nativeFlow = invoiceButtons;
+      }
+      const invRes = await sock.sendMessage(senderJid, payload);
       markMessageAsBotSent(invRes?.key?.id);
     }
     deps.addLog('success', `🧾 Invoice LunasQRIS untuk ${productName} (${variantName}) berhasil dikirimkan ke DM ${senderJid}`);
@@ -364,6 +380,8 @@ export async function dispatchIncomingMessages(
 ): Promise<void> {
   // Izinkan event 'notify' dan 'append' (pesan yang dikirim dari HP/WhatsApp Web bot sendiri masuk sebagai 'append')
   if ((type !== 'notify' && type !== 'append') || !sock) return;
+
+  const isGroupOnlyMode = loadGroupOnlySetting();
 
   for (const m of messages) {
     if (!m.message) {
@@ -493,13 +511,8 @@ export async function dispatchIncomingMessages(
         '';
     }
 
-    // Ekstraksi teks biasa jika bukan pesan respon tombol
-    const rawText =
-      m.message?.conversation ||
-      m.message?.extendedTextMessage?.text ||
-      m.message?.imageMessage?.caption ||
-      m.message?.videoMessage?.caption ||
-      '';
+    // Ekstraksi teks biasa jika bukan pesan respon tombol (termasuk pesan dalam pembungkus ephemeral)
+    const rawText = extractTextFromWaMessage(m.message);
     const trimmedText = rawText.trim();
     const isFromBotSelf = Boolean(m.key?.fromMe);
     const senderName =
@@ -510,8 +523,28 @@ export async function dispatchIncomingMessages(
 
     const cleanBtn = (buttonIdOrText || '').trim();
 
+    // Gatekeeper Mode "Grup Only": Jika aktif dan pesan berasal dari DM (!isGroup),
+    // bot diam total kecuali interaksi lanjutan sesi checkout order dari grup.
+    let earlySenderJid = m.key?.participant || remoteJid;
+    if (earlySenderJid.includes(':')) {
+      earlySenderJid = earlySenderJid.replace(/:[0-9]+@/, '@');
+    }
+    earlySenderJid = deps.resolveTargetJid(earlySenderJid);
+
+    if (isGroupOnlyMode && !isGroup) {
+      const allowedInDm = shouldAllowIncomingInDispatcher({
+        groupOnly: true,
+        isGroup: false,
+        cleanBtn,
+        hasActiveCheckoutSession: activeCheckoutSessions.has(earlySenderJid),
+      });
+      if (!allowedInDm) {
+        continue;
+      }
+    }
+
     // 1. TANGANI INTERAKSI TOMBOL KHUSUS CAROUSEL, ORDER & VCARD
-    // A. Tombol Contact Admin & Invoice Contact Admin
+    // A. Tombol Contact Admin & Invoice Contact Admin (hanya jika tidak diblokir Grup Only di DM)
     if (
       cleanBtn === 'invoice_contact_admin' ||
       cleanBtn === 'contact_admin' ||
@@ -519,6 +552,7 @@ export async function dispatchIncomingMessages(
         (cleanBtn.toLowerCase().includes('invoice_contact_admin') ||
           cleanBtn.toLowerCase().includes('contact_admin')))
     ) {
+      if (isGroupOnlyMode && !isGroup) continue;
       if (
         cleanBtn === 'invoice_contact_admin' ||
         cleanBtn.toLowerCase().includes('invoice_contact_admin')
@@ -534,6 +568,7 @@ export async function dispatchIncomingMessages(
 
     // B. Tombol Order Varian -> Membuka Sesi Konfirmasi di DM
     if (cleanBtn.startsWith('order_')) {
+      if (isGroupOnlyMode && !isGroup) continue;
       let productName = 'Produk Pilihan';
       let variantName = 'Varian Pilihan';
       let price = 5000;
@@ -597,7 +632,7 @@ export async function dispatchIncomingMessages(
         deps.addLog('warning', `Gagal cek saldo Xaviera (diteruskan): ${chkErr?.message || chkErr}`);
       }
 
-      // 2. Simpan sesi checkout aktif untuk pembeli (timeout 90 detik)
+      // 2. Simpan sesi checkout aktif untuk pembeli (timeout 3 menit)
       const sessionData: CheckoutSession = {
         senderJid,
         senderCleanNumber,
@@ -610,7 +645,7 @@ export async function dispatchIncomingMessages(
         initialMargin,
         variantId: `${productName}|${variantName}`,
         createdAt: Date.now(),
-        expiresAt: Date.now() + 90 * 1000,
+        expiresAt: Date.now() + CHECKOUT_SESSION_TIMEOUT_MS,
         waitingForPromo: false,
       };
       activeCheckoutSessions.set(senderJid, sessionData);
@@ -808,6 +843,7 @@ export async function dispatchIncomingMessages(
 
     // C. Tombol vCard Kontak (Pengiriman kartu kontak WhatsApp nomor)
     if (cleanBtn.startsWith('vcard_')) {
+      if (isGroupOnlyMode && !isGroup) continue;
       const rawNum = cleanBtn.replace(/^vcard_/, '').trim();
       const matchedBtn = (config.menuButtons || []).find(
         (b) =>
@@ -871,6 +907,7 @@ export async function dispatchIncomingMessages(
     }
 
     if (selectedProductName) {
+      if (isGroupOnlyMode && !isGroup) continue;
       deps.addLog(
         'info',
         `📦 Pelanggan ${senderName} memilih produk "${selectedProductName}" dari dropdown Single Select. Menyiapkan carousel varian...`
@@ -893,6 +930,7 @@ export async function dispatchIncomingMessages(
 
     // 3. TANGANI INTERAKSI DARI TOMBOL QUICK REPLY / MENU BUTTONS
     if (isQuickReplyResponse && cleanBtn) {
+      if (isGroupOnlyMode && !isGroup) continue;
       const cleanLower = cleanBtn.toLowerCase();
       // Cocokkan dengan tombol yang didaftarkan pada config.menuButtons
       const matchedButton = (config.menuButtons || []).find((b) => {
@@ -1249,6 +1287,11 @@ export async function dispatchIncomingMessages(
     }
 
     // 4.B TANGANI COMMAND DENGAN PREFIX (WAJIB PREFIX: / . ! ? # $ % &)
+    // Pastikan saat Grup Only = ON, chat DM yang sedang punya sesi checkout aktif pun tidak bocor ke command/carousel biasa
+    if (isGroupOnlyMode && !isGroup) {
+      continue;
+    }
+
     const firstChar = trimmedText.charAt(0);
     if (!ALLOWED_PREFIXES.includes(firstChar)) {
       // Abaikan teks manual tanpa prefix untuk menghindari spam di obrolan grup
@@ -1296,6 +1339,23 @@ export async function dispatchIncomingMessages(
     if (['admin', 'contact', 'kontak'].includes(commandName)) {
       deps.addLog('info', `📞 Menerima command ${usedPrefix}${commandName} dari ${senderName}`);
       await sendAdminContactMessage(sock, config, remoteJid, m, deps.addLog);
+      continue;
+    }
+
+    // E. Command 'hidetag' / 'h' / 'ht' (Khusus Grup Whitelist & Khusus Admin Grup)
+    if (isHideTagCommand(commandName)) {
+      if (!isGroup) {
+        // Di luar grup (chat pribadi): diam/abaikan
+        continue;
+      }
+      await handleHideTagCommand({
+        sock,
+        message: m,
+        remoteJid,
+        commandArg,
+        deps,
+        markBotSent: markMessageAsBotSent,
+      });
       continue;
     }
 
@@ -1349,8 +1409,8 @@ export async function dispatchIncomingMessages(
       continue;
     }
 
-    // E. Command Nama Produk Langsung (contoh: .netflix, .youtube, .ml, .canva, .spotify, dll.)
-    const reservedWords = ['menu', 'list', 'admin', 'contact', 'kontak', 'owner', 'order', 'help', 'info', 'ping', 'start', 'stop'];
+    // F. Command Nama Produk Langsung (contoh: .netflix, .youtube, .ml, .canva, .spotify, dll.)
+    const reservedWords = ['menu', 'list', 'admin', 'contact', 'kontak', 'owner', 'order', 'hidetag', 'ht', 'h', 'help', 'info', 'ping', 'start', 'stop'];
     if (!reservedWords.includes(commandName)) {
       deps.addLog('info', `📦 Memproses varian produk "${textWithoutPrefix}" dari ${senderName} [Prefix: "${usedPrefix}${commandName}"]`);
       try {

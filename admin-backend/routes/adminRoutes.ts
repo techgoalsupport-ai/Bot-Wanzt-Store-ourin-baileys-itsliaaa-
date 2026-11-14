@@ -8,6 +8,8 @@ import { templateRouter } from './templateRoutes.ts';
 import { expiryRouter } from './expiryRoutes.ts';
 import { telegramAdminRouter } from './telegramAdminRoutes.ts';
 import { tokenRouter } from './tokenRoutes.ts';
+import { partnerAdminRouter } from './partnerAdminRoutes.ts';
+import { masterSettingsRouter } from './masterSettingsRoutes.ts';
 import { activeAdminTokens, impersonationTokens } from '../services/adminAuthService.ts';
 
 export const adminRouter = Router();
@@ -24,4 +26,6 @@ adminRouter.use('/', impersonateRouter);
 adminRouter.use('/', templateRouter);
 adminRouter.use('/', expiryRouter);
 adminRouter.use('/', tokenRouter);
+adminRouter.use('/', partnerAdminRouter);
+adminRouter.use('/', masterSettingsRouter);
 adminRouter.use('/telegram', telegramAdminRouter);

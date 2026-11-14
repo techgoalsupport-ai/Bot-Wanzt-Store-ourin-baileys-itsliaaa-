@@ -2804,3 +2804,365 @@ Rencana Pengujian:
 
 Hasil yang Diharapkan:
 Tampilan format [sisa hari]/[total hari] day bertambah secara presisi dan konsisten saat token di-redeem (misal 431/450 + 5 hari menjadi 436/455 day, dan 450/450 + 3 hari menjadi 453/453 day).
+
+---
+
+[58.0] - IMPLEMENTASI REST API KOLABORATOR (PARTNER / RESELLER API) & MANAJEMEN PARTNER API DI DASHBOARD MASTER
+
+- Tanggal: 2026-11-12 16:31
+- Status: Completed
+Referensi SCHEDULE: 26.0
+
+Tujuan Implementasi:
+Membangun sistem REST API Kolaborator (Partner / Reseller API) untuk penjualan otomatis sewa bot dan voucher perpanjangan masa sewa sesuai kesepakatan final:
+1. Skema database kemitraan di `database/master.db`:
+   - Tabel `collaborator_api_keys` (id, name, api_key_hash, prefix_key, status, last_used_at, created_at).
+   - Tabel `collaborator_logs` (id, collaborator_id, collaborator_name, action_type, target_id, duration_label, request_ip, created_at).
+2. Modul utilitas murni dan unit test (`partnerApiUtils.ts` + `partnerApiUtils.test.ts`):
+   - Generator API key acak berprefiks `wzp_`, hashing SHA-256, rate limiter sliding window, serta parser dan validator durasi fleksibel (`minutes`, `hours`, `days`, `weeks`, `months`).
+3. Layanan bisnis dan middleware autentikasi Partner API:
+   - `partnerApiService.ts` untuk CRUD API Key Partner, pencatatan log aktivitas, dan verifikasi key.
+   - `partnerAuthMiddleware.ts` yang membaca header `x-api-key` atau `Authorization: Bearer <key>`, menolak key tidak valid (`401`), menolak key suspended (`403`), dan menerapkan rate limit (`429`).
+4. 2 Endpoint REST API Publik Mitra (`/api/v1/partner`):
+   - `POST /api/v1/partner/tenants/create`: Membuat akun tenant baru otomatis (unlimited selama API Key aktif) via `TenantService.createTenant()`.
+   - `POST /api/v1/partner/tokens/create`: Membuat token voucher perpanjangan masa sewa sekali pakai via `TokenService.createToken()`.
+   - Mount di `backend/app.ts` sebelum middleware konteks tenant dashboard agar tidak bentrok dengan sesi token dashboard.
+5. Antarmuka Manajemen Partner API di Dashboard Master (`admin-frontend`):
+   - Rute admin backend `/api/admin/partners` (GET list keys & logs, POST create key, PATCH toggle status, DELETE key).
+   - Tab baru **"Partner API"** di `AdminSidebar.tsx`, `AdminHeader.tsx`, dan `admin-frontend/src/App.tsx`.
+   - Komponen `TabPartnerApi.tsx` dengan kartu metrik, daftar API key, kontrol aktif/suspend & hapus, log aktivitas API, modal buat API key baru, modal tampilan API key sekali salin, dan panel dokumentasi integrasi interaktif (cURL, Node.js, PHP, Python).
+
+Bagian yang Akan Diubah/Dibuat:
+1. `admin-backend/database/masterSqlite.ts` - Tambah tabel `collaborator_api_keys` dan `collaborator_logs`.
+2. `admin-backend/types/admin.types.ts` - Tambah tipe `CollaboratorApiKey`, `CollaboratorLog`, dan `CreatePartnerKeyResult`.
+3. `admin-backend/services/partnerApiUtils.ts` (Baru) - Fungsi murni generator API key, hashing SHA-256, rate limiter, dan validasi payload durasi.
+4. `admin-backend/services/partnerApiUtils.test.ts` (Baru) - Unit test menggunakan `node:test`.
+5. `admin-backend/services/partnerApiService.ts` (Baru) - CRUD API key kolaborator, verifikasi key, dan pencatatan log.
+6. `admin-backend/routes/partnerAdminRoutes.ts` (Baru) - Endpoint Master Admin untuk kelola API Key & log.
+7. `admin-backend/routes/adminRoutes.ts` - Mount `partnerAdminRouter`.
+8. `admin-backend/routes/partnerPublicRoutes.ts` (Baru) - Middleware autentikasi API key + rate limit dan 2 endpoint publik (`/tenants/create` dan `/tokens/create`).
+9. `backend/app.ts` - Mount `/api/v1/partner` sebelum middleware sesi tenant.
+10. `admin-frontend/src/types/admin.types.ts` - Tambah interface `CollaboratorApiKey` & `CollaboratorLog`.
+11. `admin-frontend/src/components/layout/AdminSidebar.tsx` & `AdminHeader.tsx` - Tambah menu navigasi & header tab `partners`.
+12. `admin-frontend/src/components/modals/CreatePartnerKeyModal.tsx` (Baru) - Modal input nama partner baru.
+13. `admin-frontend/src/components/modals/PartnerKeyCreatedModal.tsx` (Baru) - Modal menampilkan API Key mentah 1 kali dengan tombol salin.
+14. `admin-frontend/src/components/modals/DeletePartnerKeyModal.tsx` (Baru) - Modal konfirmasi in-app hapus API key (tanpa `window.confirm`).
+15. `admin-frontend/src/components/dashboard/tabs/TabPartnerApi.tsx` (Baru) - Halaman manajemen API key, log aktivitas partner, dan dokumentasi integrasi (cURL, Node.js, PHP, Python).
+16. `admin-frontend/src/App.tsx` - Integrasikan `selectedNavTab === 'partners'`.
+
+Alasan Perubahan:
+Memungkinkan reseller/partner kolaborasi menjual layanan sewa bot dan voucher token perpanjangan secara otomatis via REST API sementara pengelola berbagi 1 akun Master Admin yang sama.
+
+Strategi Implementasi:
+1. Definisikan tabel SQLite dan tipe data TypeScript.
+2. Buat dan uji unit test logika murni di `partnerApiUtils.ts` terlebih dahulu.
+3. Bangun service database dan router admin + router publik `/api/v1/partner`.
+4. Bangun antarmuka UI `TabPartnerApi.tsx` dan modal-modal pendukungnya mengikuti bahasa desain Clean Light `#0084D1` dan aturan anti-slop (`3_saas_dashboard.md`).
+5. Jalankan unit test, `compile_applet`, `lint_applet`, restart dev server, uji endpoint via cURL, dan verifikasi UI di browser headless via `playwright-cli`.
+6. Pastikan tidak ada karakter em-dash atau en-dash di seluruh file.
+
+Rencana Pengujian:
+1. Unit test `npx --yes tsx --test admin-backend/services/partnerApiUtils.test.ts`.
+2. Uji cURL ke `/api/v1/partner/tenants/create` dan `/api/v1/partner/tokens/create` (kasus tanpa key 401, key suspend 403, key valid 200, payload invalid 400).
+3. Verifikasi UI Partner API di browser headless (`http://localhost:3000/admin/`): buat key, salin key, toggle status, lihat log, cek dokumentasi cURL/Node/PHP/Python, reload halaman.
+
+Hasil yang Diharapkan:
+Partner API beroperasi stabil, aman, unlimited selama key aktif, terintegrasi penuh dengan `TenantService` dan `TokenService`, serta mudah dikelola melalui tab Partner API di Dashboard Master Admin.
+
+---
+
+[59.0] - IMPLEMENTASI TAMPILAN MASA SEWA REAL-TIME SPESIFIK (HARI, JAM, MENIT, DETIK) PADA DASHBOARD MASTER & DASHBOARD BOT
+
+- Tanggal: 2026-11-12 18:16
+- Status: Completed
+Referensi SCHEDULE: 31.0
+
+Tujuan Implementasi:
+Menggantikan tampilan durasi sewa yang sebelumnya dibulatkan ke satuan Hari pada Dashboard Master Admin (`admin-frontend`) dan Dashboard Bot Tenant (`frontend`) dengan hitung mundur spesifik real-time (Hari, Jam, Menit, Detik) serta jam kedaluwarsa asli dari database.
+
+Bagian yang Akan Diubah/Dibuat:
+1. `admin-frontend/src/utils/durationFormat.ts` (Baru) - Fungsi murni dekomposisi milidetik, formatter countdown ringkas (`29h 14j 32m 08d`), label total durasi fleksibel (`15 Menit`, `5 Jam`, `30 Hari`), formatter tanggal & jam WIB, serta kalkulasi persentase berbasis milidetik.
+2. `admin-frontend/src/utils/durationFormat.test.ts` (Baru) - Unit test menggunakan `node:test` untuk seluruh fungsi formatter durasi.
+3. `frontend/src/utils/durationFormat.ts` (Baru) - Salinan fungsi utilitas murni untuk root Vite `frontend/` guna mendukung tampilan detail Hari, Jam, Menit, Detik pada Dashboard Bot.
+4. `admin-frontend/src/components/dashboard/TenantTable.tsx` & `TenantTableRow.tsx` - Menambahkan ticker 1 detik bersama, format countdown ringkas (`font-mono tabular-nums`), serta jam kedaluwarsa akurat pada kolom Expired.
+5. `admin-frontend/src/App.tsx` & `admin-frontend/src/components/modals/AddTenantModal.tsx` - Mengurutkan durasi sewa berdasar timestamp `expires_at` riil serta menampilkan estimasi durasi yang presisi saat membuat unit baru.
+6. `frontend/src/components/tabs/TabBotManagement.tsx` - Menambahkan ticker 1 detik real-time, mengganti teks `{sisa}/{total} day` pada kartu Masa Aktif menjadi tampilan countdown spesifik Hari, Jam, Menit, Detik, memperbaiki persentase bar berbasis milidetik, dan mengganti teks statis `Pukul 23:59 WIB` menjadi jam kedaluwarsa asli dari server.
+
+Alasan Perubahan:
+Ketika masa sewa ditetapkan dalam satuan menit/jam atau saat masa sewa tersisa kurang dari 1 hari, tampilan berbasis hari bulat terasa kaku dan kurang akurat. Hitung mundur hingga detik dan jam kedaluwarsa asli membuat status sewa transparan dan akurat di kedua dashboard.
+
+Strategi Implementasi:
+1. Tulis modul utilitas murni `durationFormat.ts` dan jalankan unit test via `node:test`.
+2. Perbarui `TenantTable.tsx`, `TenantTableRow.tsx`, `AddTenantModal.tsx`, dan sorting di `admin-frontend/src/App.tsx`.
+3. Perbarui `TabBotManagement.tsx` di `frontend/`.
+4. Pastikan bebas karakter em-dash dan en-dash.
+5. Verifikasi `compile_applet`, `lint_applet`, restart server, serta inspeksi visual browser di Desktop dan Mobile untuk Dashboard Master & Dashboard Bot.
+
+Hasil yang Diharapkan:
+Kedua dashboard menampilkan hitung mundur spesifik tiap 1 detik secara stabil (zero layout jitter berkat `tabular-nums`) dan menampilkan jam kedaluwarsa asli.
+
+---
+
+[60.0] - PERBAIKAN LOGIKA PENCOCOKAN STAGE & LABEL SISA WAKTU PERINGATAN KEDALUWARSA OTOMATIS
+
+- Tanggal: 2026-11-12 18:57
+- Status: Completed
+Referensi SCHEDULE: 32.0
+
+Tujuan Implementasi:
+1. Menghilangkan kesalahan pencocokan stage di mana sisa waktu ~1 jam masuk ke tahap `h_5h` ("5 Jam Lagi") dan sisa waktu ~1 hari masuk ke tahap `h_3d` ("3 Hari Lagi").
+2. Menghasilkan label `{remainingTime}` secara dinamis dari sisa waktu sebenarnya (`diffMs`) agar isi pesan WhatsApp selalu jujur dan presisi.
+3. Menjamin `calculateExpirationDate` untuk satuan menit, jam, hari, dan minggu bebas dari selisih perubahan DST timezone OS.
+
+Bagian yang Akan Diubah/Dibuat:
+1. `backend/services/expiryWarningUtils.ts` (Baru) - Fungsi murni `formatRemainingWarningLabel(diffMs)` dan `evaluateExpiryWarningStage(diffMs, flags)` dengan jendela target akurat serta grace toleransi cron.
+2. `backend/services/expiryWarningUtils.test.ts` (Baru) - Unit test menggunakan `node:test` untuk menguji kasus 1 jam, 1 jam + grace, 2 jam, 5 jam, 1 hari, 1 hari + grace, 3 hari, 15 menit, dan kedaluwarsa.
+3. `backend/services/expiryWarningService.ts` - Mengganti logika if-else rentang lebar statis dengan `evaluateExpiryWarningStage`.
+4. `admin-backend/services/tenantService.ts` - Menggunakan penambahan milidetik tepat di `calculateExpirationDate` untuk satuan `minutes`, `hours`, `days`, `weeks`.
+
+Alasan Perubahan:
+Logika sebelumnya menggunakan rentang terbuka antar threshold (`> 1h && <= 5h` berlabel `'5 Jam Lagi'`, dan `> 1d && <= 3d` berlabel `'3 Hari Lagi'`) tanpa grace batas cron maupun kalkulasi sisa waktu dinamis, sehingga sisa waktu di sekitar 1 jam dan 1 hari salah diklasifikasikan ke stage di atasnya.
+
+Strategi Implementasi:
+1. Tulis modul murni `expiryWarningUtils.ts` dengan aturan window stage:
+   - `h_1h`: `diffMs > 0 && diffMs <= 1 jam 10 menit`
+   - `h_5h`: `diffMs >= 3 jam && diffMs <= 5 jam 10 menit`
+   - `h_1d`: `diffMs >= 18 jam && diffMs <= 24 jam 15 menit`
+   - `h_3d`: `diffMs >= 48 jam && diffMs <= 72 jam 15 menit`
+   Disertai label dinamis `formatRemainingWarningLabel(diffMs)`.
+2. Tulis unit test di `expiryWarningUtils.test.ts` dan jalankan via `tsx --test`.
+3. Hubungkan ke `expiryWarningService.ts` dan perbaiki `calculateExpirationDate` di `tenantService.ts`.
+4. Verifikasi dengan `compile_applet`, `lint_applet`, dan pengecekan nol em-dash/en-dash.
+
+Urutan Pengerjaan:
+1. Catat entri [60.0] di `brain/LANGKAH_IMPLEMENTASI.md` dan [32.0] di `brain/SCHEDULE.md`.
+2. Buat `backend/services/expiryWarningUtils.ts` dan `backend/services/expiryWarningUtils.test.ts`.
+3. Update `backend/services/expiryWarningService.ts` dan `admin-backend/services/tenantService.ts`.
+4. Jalankan unit test, `compile_applet`, dan `lint_applet`.
+5. Update status menjadi Completed dan catat di `brain/PROGRESS.md`.
+
+Dampak Perubahan:
+Owner tenant menerima peringatan masa aktif yang 100% sesuai dengan sisa waktu sebenarnya (1 jam menerima peringatan 1 jam, 1 hari menerima peringatan 1 hari).
+
+Rencana Pengujian:
+1. Unit test `npx --yes tsx --test backend/services/expiryWarningUtils.test.ts`.
+2. Simulasi `evaluateExpiryWarningStage` pada 1 jam, 1 jam 4 menit, 1 hari, 1 hari 4 menit, 2 jam, 5 jam, 3 hari, dan paket 15 menit.
+3. Kompilasi build (`compile_applet`) dan linting TypeScript (`lint_applet`).
+
+Hasil yang Diharapkan:
+Bug salah kirim peringatan 5 jam saat sisa 1 jam dan 3 hari saat sisa 1 hari terselesaikan secara menyeluruh dan teruji.
+
+---
+
+[61.0] - IMPLEMENTASI FITUR HIDE TAG GRUP WHATSAPP (HIDETAG / H / HT) BESERTA DUKUNGAN REPLY PESAN & MEDIA
+
+- Tanggal: 2026-11-13 00:05
+- Status: Completed
+Referensi SCHEDULE: 33.0
+
+Tujuan Implementasi:
+1. Menambahkan handler command Hide Tag (`hidetag`, `h`, `ht`) pada bot WhatsApp berbasis `@itsliaaa/baileys`.
+2. Membatasi eksekusi khusus di dalam grup (`@g.us`) dan hanya oleh Admin Grup (`admin` / `superadmin`) dengan dukungan penuh addressing mode PN (`@s.whatsapp.net`) dan LID (`@lid`).
+3. Mengabaikan secara senyap (diam) apabila command dipicu di chat pribadi, oleh anggota non-admin, atau tanpa isi pesan/reply.
+4. Mendukung pengiriman pesan teks langsung maupun pengiriman ulang teks/media (`image`, `video`, `audio`, `sticker`, `document`) yang di-reply oleh admin.
+
+Bagian yang Akan Diubah/Dibuat:
+1. `backend/handlers/hideTagUtils.ts` (Baru):
+   - Fungsi murni normalisasi JID (`normalizeJidIdentifier`), pengecekan command Hide Tag (`isHideTagCommand`), ekstraksi identitas pengirim PN/LID (`extractSenderIdentifiers`), validasi admin grup (`isGroupParticipantAdmin`), ekstraksi seluruh JID anggota (`extractAllParticipantJids`), dan ekstraksi konten pesan/media dari quoted message (`unwrapWaMessage`, `extractQuotedTarget`).
+2. `backend/handlers/hideTagUtils.test.ts` (Baru):
+   - Suite unit test `node:test` untuk menguji normalisasi JID dengan suffix device, pencocokan admin mode PN maupun LID, `fromMe`, ekstraksi JID anggota grup tanpa duplikat, dan ekstraksi teks/media dari pesan biasa, `ephemeralMessage`, dan `viewOnceMessage`.
+3. `backend/handlers/hideTagHandler.ts` (Baru):
+   - Cache ringan `groupMetadata` (TTL 30 detik per grup agar responsif dan tidak spam query ke WhatsApp), verifikasi admin grup, pengunduhan buffer media via `downloadMediaMessage` (dengan `reuploadRequest: sock.updateMediaMessage`), dan pengiriman pesan ke grup dengan `{ mentions }`.
+4. `backend/handlers/messageDispatcher.ts`:
+   - Memperbarui ekstraksi `rawText` agar juga membaca pesan yang terbungkus (`ephemeralMessage` / `viewOnceMessage`).
+   - Menangani command `hidetag`, `ht`, `h` di blok prefix: langsung memanggil `handleHideTagCommand` saat di grup dan mengabaikan diam-diam jika di private chat.
+   - Menambahkan `'hidetag'`, `'ht'`, `'h'` ke `reservedWords`.
+
+Alasan Perubahan:
+Memenuhi permintaan pengguna untuk menghadirkan fitur Hide Tag yang aman, cepat, mendukung reply teks/media, bekerja akurat di grup PN maupun LID, dan senyap terhadap non-admin atau private chat.
+
+Strategi Implementasi:
+1. Tulis modul utilitas murni `backend/handlers/hideTagUtils.ts` dan unit test `backend/handlers/hideTagUtils.test.ts`.
+2. Jalankan unit test via `npx --yes tsx --test backend/handlers/hideTagUtils.test.ts`.
+3. Tulis handler Baileys `backend/handlers/hideTagHandler.ts`.
+4. Integrasikan ke `backend/handlers/messageDispatcher.ts`.
+5. Jalankan unit test, `compile_applet`, dan `lint_applet`, lalu pastikan bebas em-dash/en-dash.
+6. Update status menjadi Completed di `SCHEDULE.md` dan `LANGKAH_IMPLEMENTASI.md`, serta catat hasil di `PROGRESS.md`.
+
+Urutan Pengerjaan:
+1. Catat rencana di `brain/SCHEDULE.md` [33.0] dan `brain/LANGKAH_IMPLEMENTASI.md` [61.0].
+2. Buat `backend/handlers/hideTagUtils.ts` dan `backend/handlers/hideTagUtils.test.ts`.
+3. Buat `backend/handlers/hideTagHandler.ts`.
+4. Edit `backend/handlers/messageDispatcher.ts`.
+5. Uji unit test, `compile_applet`, dan `lint_applet`.
+6. Restart dev server dan dokumentasikan hasil di `brain/PROGRESS.md`.
+
+Dampak Perubahan:
+Admin grup kini dapat memanggil `.ht`, `.h`, atau `.hidetag` (dengan teks atau reply pesan/media) untuk men-tag seluruh anggota grup tanpa memunculkan teks `@nomor`.
+
+Rencana Pengujian:
+1. Unit test `npx --yes tsx --test backend/handlers/hideTagUtils.test.ts`.
+2. Kompilasi dan linting TypeScript (`compile_applet` dan `lint_applet`).
+
+Hasil yang Diharapkan:
+Fitur Hide Tag berjalan mulus di grup whitelist baik untuk pesan teks baru maupun reply teks/media, akurat mendeteksi admin di mode PN dan LID, dan diam jika dipicu di luar ketentuan.
+
+---
+
+[62.0] - IMPLEMENTASI TOGGLE GRUP ONLY DI MANAGEMENT GROUP, TIMEOUT SESI ORDER 3 MENIT, DAN TOMBOL CTA URL ADMIN INVOICE
+
+- Tanggal: 2026-11-13 00:32
+- Status: Completed
+Referensi SCHEDULE: 34.0
+
+Tujuan Implementasi:
+1. Menyediakan pengaturan per-tenant **"Grup Only"** (default OFF) di database SQLite dan endpoint API backend bot.
+2. Menampilkan tombol switch ON/OFF **"Grup Only"** beserta banner rekomendasi keamanan anti-banned WhatsApp di tab **Management group** (`TabGrup.tsx`).
+3. Memblokir secara senyap (diam total tanpa balasan) seluruh pemicu awal di chat pribadi (DM) saat **Grup Only = ON**, sambil tetap mengizinkan kelanjutan sesi checkout order dari grup (termasuk notifikasi sesi berakhir saat tombol checkout ditekan setelah timeout).
+4. Memperpanjang durasi sesi checkout menjadi **3 menit** (menggantikan 90 detik) di logika backend, template bawaan, dan keterangan UI.
+5. Mengubah tombol **Hubungi Admin** pada invoice QRIS menjadi tombol `cta_url` yang mengarah ke `https://wa.me/{nomerAdmin}`.
+
+Bagian yang Akan Diubah/Dibuat:
+1. `backend/database/sqlite.ts` & `backend/database/tenantDbManager.ts`:
+   - Menambahkan tabel `bot_settings (setting_key TEXT PRIMARY KEY, setting_value TEXT NOT NULL, updated_at TEXT NOT NULL)` untuk menyimpan pengaturan `group_only` per tenant.
+2. `backend/services/groupService.ts`, `backend/botManager.ts`, & `backend/routes/botRoutes.ts`:
+   - Menambahkan `loadGroupOnlySetting()` (default `false`) dan `saveGroupOnlySetting(enabled)`.
+   - Menambahkan method `getGroupOnlySetting()` & `setGroupOnlySetting()` di `BotManager`, serta menyertakan `groupOnly` dalam hasil `getParticipatingGroups()`.
+   - Menambahkan endpoint `GET /api/bot/groups/group-only` dan `POST /api/bot/groups/group-only` di `botRoutes.ts`.
+3. `backend/handlers/dmFilterUtils.ts` & `backend/handlers/dmFilterUtils.test.ts` (Baru):
+   - Konstanta `CHECKOUT_SESSION_TIMEOUT_MS = 3 * 60 * 1000` (3 menit).
+   - Fungsi murni `shouldAllowIncomingInDispatcher()` untuk mengizinkan sesi checkout aktif & tombol checkout (`checkout_promo` / `checkout_direct`) di DM saat `groupOnly = true`, dan menolak diam-diam pesan DM lainnya.
+   - Fungsi murni `buildInvoiceContactButtons()` untuk membuat tombol `cta_url` `https://wa.me/{cleanPhone}`.
+   - Unit test `node:test` untuk seluruh aturan filter DM, timeout 3 menit, dan generator URL admin.
+4. `backend/handlers/messageDispatcher.ts`:
+   - Menggunakan `loadGroupOnlySetting()` saat memproses pesan masuk.
+   - Menerapkan gatekeeper DM secara menyeluruh (baik di awal pesan masuk maupun menjaga agar sesi checkout aktif yang mengetik teks non-promo/bayar tidak bocor ke handler command/carousel saat `groupOnly = true`).
+   - Memperbarui timeout `activeCheckoutSessions` menjadi `CHECKOUT_SESSION_TIMEOUT_MS` (3 menit).
+   - Menggunakan `buildInvoiceContactButtons(config.storeInfo?.adminNumber, config.storeInfo?.ownerNumber)` untuk tombol `Hubungi Admin` tipe `cta_url` pada invoice LunasQRIS.
+5. Pembaruan teks 90 detik menjadi 3 menit & antarmuka UI:
+   - `backend/config/configManager.ts`
+   - `admin-backend/database/masterSqlite.ts`
+   - `admin-frontend/src/components/modals/AddEditTemplateModal.tsx`
+   - `frontend/src/hooks/useStoreConfig.ts`
+   - `frontend/src/components/tabs/TabCommand.tsx`
+   - `frontend/src/types/dashboard.types.ts` (`groupOnly?: boolean` pada `GroupsResponse` / state hook)
+   - `frontend/src/hooks/useWhatsAppGroups.ts` (memuat dan menyimpan `groupOnly`, serta memastikan `Management group` ikut memicu auto-fetch)
+   - `frontend/src/components/tabs/TabContentRenderer.tsx` & `frontend/src/components/tabs/TabGrup.tsx` (menampilkan kontrol ON/OFF **Grup Only** + banner rekomendasi keamanan anti-blokir WhatsApp).
+
+Alasan Perubahan:
+Melindungi nomor WhatsApp bot penyewa dari risiko banned/penangguhan oleh WhatsApp akibat interaksi di chat pribadi, memberi waktu konfirmasi order lebih lega (3 menit), dan mengarahkan tombol bantuan invoice langsung ke admin via `wa.me`.
+
+Strategi Implementasi:
+1. Buat skema tabel `bot_settings` serta fungsi layanan `loadGroupOnlySetting` dan `saveGroupOnlySetting`.
+2. Buat dan uji `dmFilterUtils.ts` + `dmFilterUtils.test.ts`.
+3. Integrasikan gatekeeper `groupOnly`, timeout 3 menit, dan `cta_url` invoice di `messageDispatcher.ts`.
+4. Perbarui teks `90 detik` -> `3 menit` di backend, master DB, dan frontend.
+5. Bangun antarmuka toggle **Grup Only** + peringatan rekomendasi di `TabGrup.tsx` dan hubungkan ke `useWhatsAppGroups.ts`.
+6. Jalankan unit test, `compile_applet`, `lint_applet`, restart dev server, dan verifikasi UI di browser headless (Desktop & Mobile).
+
+Urutan Pengerjaan:
+1. Update `backend/database/sqlite.ts`, `backend/database/tenantDbManager.ts`, `backend/services/groupService.ts`, `backend/botManager.ts`, `backend/routes/botRoutes.ts`.
+2. Buat `backend/handlers/dmFilterUtils.ts` & `backend/handlers/dmFilterUtils.test.ts`.
+3. Update `backend/handlers/messageDispatcher.ts`, `backend/config/configManager.ts`, `admin-backend/database/masterSqlite.ts`.
+4. Update `admin-frontend/src/components/modals/AddEditTemplateModal.tsx`, `frontend/src/hooks/useStoreConfig.ts`, `frontend/src/components/tabs/TabCommand.tsx`.
+5. Update `frontend/src/hooks/useWhatsAppGroups.ts`, `frontend/src/components/tabs/TabContentRenderer.tsx`, `frontend/src/components/tabs/TabGrup.tsx`.
+6. Verifikasi unit test, compile, lint, browser UI test, lalu catat di `brain/PROGRESS.md`.
+
+Dampak Perubahan:
+Pemilik toko dapat mengaktifkan mode **Grup Only** kapan saja melalui tab Management Group untuk keamanan akun WhatsApp tanpa mengorbankan alur order dari grup ke DM, dengan masa tunggu konfirmasi 3 menit dan tombol bantuan admin `wa.me` langsung.
+
+Rencana Pengujian:
+1. Unit test `npx --yes tsx --test backend/handlers/dmFilterUtils.test.ts`.
+2. Uji API `GET /api/bot/groups`, `GET /api/bot/groups/group-only`, dan `POST /api/bot/groups/group-only`.
+3. Uji visual & interaksi toggle **Grup Only** pada tab Management Group di browser headless Desktop & Mobile, plus verifikasi persistensi setelah reload halaman.
+4. Kompilasi build (`compile_applet`) dan linting TypeScript (`lint_applet`).
+
+Hasil yang Diharapkan:
+Toggle **Grup Only** berfungsi penuh, aman terhadap akun WhatsApp, sesi order 3 menit berjalan lancar dari grup ke DM, dan tombol `Hubungi Admin` invoice mengarah langsung ke `wa.me/{nomerAdmin}`.
+
+---
+
+[63.0] - IMPLEMENTASI MULTI MASTER ADMIN DINAMIS, KONTROL PROBABILITAS RANGE SLIDER, DAN RUJUKAN ACAK BERBOBOT
+
+- Tanggal: 2026-11-13 03:32
+- Status: Completed
+Referensi SCHEDULE: 35.0
+
+Tujuan Implementasi:
+1. Menyimpan daftar kontak Master Admin secara persisten di `database/master.db` (tabel `master_admins`) dengan kolom nama, nomor WhatsApp resmi, dan bobot persentase (`weight`).
+2. Menyediakan halaman **Pengaturan Master** (`TabMasterSettings.tsx`) di Dashboard Master Admin agar admin dapat mengedit, menambah secara fleksibel (>2 nomor), menghapus (minimal 1 admin wajib tersisa), dan mengatur probabilitas pemilihan dengan **Range Slider** (`0%` - `100%`, auto-balance total `100%`) lalu menyimpannya lewat tombol **"Simpan Pengaturan"**.
+3. Mendistribusikan rujukan tenant (baik di tombol WhatsApp peringatan kedaluwarsa maupun di modal Suspend / endpoint rujukan publik) secara acak berbobot menggunakan probabilitas yang disetel, dengan penguncian kontak selama modal terbuka.
+
+Bagian yang Akan Diubah/Dibuat:
+1. `admin-backend/database/masterSqlite.ts`:
+   - Inisialisasi tabel `master_admins` dan auto-seed admin default `+6285712439395` (`weight = 100`).
+2. `admin-backend/services/masterAdminUtils.ts` & `admin-backend/services/masterAdminUtils.test.ts` (Baru):
+   - Helper murni normalisasi nomor (`+628...`), `equalizeWeights`, `rebalanceWeights` (total tetap 100%, dukung 0%), `validateMasterAdminList`, dan `pickWeightedMasterAdmin`.
+   - Unit test `node:test` komprehensif untuk seluruh fungsi di atas.
+3. `admin-backend/services/masterAdminContactService.ts` & `admin-backend/routes/masterSettingsRoutes.ts` (Baru) + `admin-backend/routes/adminRoutes.ts`:
+   - Service CRUD database `master_admins` dan random selector berbasis `crypto.randomInt`.
+   - Endpoint `GET /api/admin/master-admins` dan `PUT /api/admin/master-admins`.
+4. `backend/routes/authRoutes.ts`:
+   - Endpoint `GET /api/auth/master-admin-contact` untuk mengambil 1 kontak Master Admin hasil acak berbobot bagi dashboard tenant.
+5. `backend/services/expiryWarningService.ts`:
+   - Mengganti konstanta `MASTER_ADMIN_WA` statis menjadi pemilihan dinamis via `MasterAdminContactService.pickRandomMasterAdmin()`.
+6. `frontend/src/components/modals/SuspendedAccountModal.tsx` & `frontend/src/config/adminContact.ts`:
+   - Memuat kontak Master Admin dari `/api/auth/master-admin-contact` saat modal dipasang (mount), menguncinya selama tampilan terbuka, dan fallback aman ke kontak default jika jaringan gagal.
+7. `admin-frontend/src/types/admin.types.ts`, `admin-frontend/src/components/dashboard/tabs/TabMasterSettings.tsx` (Baru), & `admin-frontend/src/App.tsx`:
+   - Membangun antarmuka tab **Pengaturan Master** dengan daftar kartu Master Admin dinamis, input Nama + Nomor WA (`+62` + `8...`), komponen **Range Slider**, tombol **Bagi Rata**, tombol **Tambah Master Admin**, dan tombol **Simpan Pengaturan**.
+
+Alasan Perubahan:
+Memungkinkan pengelola platform menambah lebih dari 1 nomor Master Admin (misal 2 admin dengan porsi 50/50 atau rasio kustom) dan mengendalikan pembagian beban rujukan tenant langsung dari Dashboard Master Admin.
+
+Strategi Implementasi:
+1. Rancang logika murni distribusi & validasi di `masterAdminUtils.ts` lalu uji dengan `node:test`.
+2. Tambahkan tabel `master_admins` di `masterSqlite.ts` dan bangun `masterAdminContactService.ts` + `masterSettingsRoutes.ts`.
+3. Pasang endpoint `GET /api/auth/master-admin-contact` di `backend/routes/authRoutes.ts` dan hubungkan ke `expiryWarningService.ts` serta `SuspendedAccountModal.tsx`.
+4. Bangun komponen `TabMasterSettings.tsx` di `admin-frontend` dan integrasikan ke `App.tsx`.
+5. Jalankan unit test, `compile_applet`, `lint_applet`, restart dev server, dan uji UI browser Desktop & Mobile.
+
+Urutan Pengerjaan:
+1. Update `admin-backend/database/masterSqlite.ts`.
+2. Buat `admin-backend/services/masterAdminUtils.ts` & `masterAdminUtils.test.ts`.
+3. Buat `admin-backend/services/masterAdminContactService.ts` & `admin-backend/routes/masterSettingsRoutes.ts`, lalu pasang di `adminRoutes.ts`.
+4. Update `backend/routes/authRoutes.ts`, `backend/services/expiryWarningService.ts`, `frontend/src/config/adminContact.ts`, dan `frontend/src/components/modals/SuspendedAccountModal.tsx`.
+5. Update `admin-frontend/src/types/admin.types.ts`, buat `admin-frontend/src/components/dashboard/tabs/TabMasterSettings.tsx`, dan hubungkan ke `admin-frontend/src/App.tsx`.
+6. Verifikasi unit test, compile, lint, browser test Desktop & Mobile, lalu update dokumentasi ke Completed.
+
+Dampak Perubahan:
+Sistem rujukan ke Master Admin tidak lagi terpaku pada satu nomor statis dan dapat dibagi secara dinamis sesuai persentase range slider yang disimpan pengelola.
+
+Rencana Pengujian:
+1. Unit test `npx --yes tsx --test admin-backend/services/masterAdminUtils.test.ts`.
+2. Uji API `GET/PUT /api/admin/master-admins` dan `GET /api/auth/master-admin-contact`.
+3. Uji UI tab **Pengaturan Master** di browser headless (Desktop 1440x900 & Mobile 390x844): tambah admin ke-2, ubah slider, simpan, reload untuk memastikan persistensi, dan uji tombol Bagi Rata.
+4. Verifikasi `compile_applet` dan `lint_applet` bersih tanpa error.
+
+Hasil yang Diharapkan:
+Tab Pengaturan Master berfungsi penuh untuk mengelola banyak kontak Master Admin dengan slider persentase total 100% dan rujukan tenant terdistribusi sesuai pengaturan tersebut.
+
+---
+
+[64.0] - PENYEDERHANAAN DESAIN MINIMALIS PADA TAB PENGATURAN MASTER
+
+- Tanggal: 2026-11-13 03:41
+- Status: Completed
+Referensi SCHEDULE: 35.0
+
+Tujuan Implementasi:
+Menyederhanakan tampilan `TabMasterSettings.tsx` agar jauh lebih minimalis, lapang, dan nyaman dilihat tanpa tumpukan kartu bersarang, badge warna berlebihan, atau teks penjelasan berulang.
+
+Bagian yang Akan Diubah:
+- `admin-frontend/src/components/dashboard/tabs/TabMasterSettings.tsx`:
+  * Menyatukan daftar admin dalam satu kontainer putih bersih berpemisah garis tipis (`divide-y divide-slate-100`).
+  * Menghilangkan badge nomor/status yang ramai, kotak bar terpisah, tombol `wa.me` per baris, serta teks keterangan berulang di bawah setiap slider.
+  * Menata input Nama, Nomor WhatsApp (`+62`), Range Slider ringkas, persentase tabular, dan tombol hapus ikon menjadi baris yang rapi, lega, dan fokus.
+  * Menyederhanakan kartu info sistem di bagian bawah menjadi baris ringkas yang tenang.
+
+Alasan Perubahan:
+Merespons masukan pengguna bahwa desain sebelumnya masih terasa terlalu ramai/ribet dan kurang enak dilihat.
+
+Hasil yang Diharapkan:
+Halaman Pengaturan Master tampil minimalis, modern, bersih, mudah dipindai, dan seluruh fungsi (tambah, hapus, range slider auto-balance 100%, 0%, bagi rata, dan simpan) tetap bekerja sempurna.
+
+

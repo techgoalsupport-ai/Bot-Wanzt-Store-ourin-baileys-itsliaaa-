@@ -8,6 +8,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { CreatedTenantResult } from '../../types/admin.types.ts';
+import { formatTotalRentalDuration } from '../../utils/durationFormat.ts';
 
 interface AddTenantModalProps {
   isOpen: boolean;
@@ -95,6 +96,8 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
           tenant_id: data.data.tenant_id,
           store_name: data.data.store_name,
           duration_days: data.data.duration_days,
+          created_at: data.data.created_at,
+          expires_at: data.data.expires_at,
         });
 
         // Reset input fields
@@ -178,8 +181,14 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
                   <span className="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">{createdTenantResult.password}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-500">Estimasi Masa Sewa:</span>
-                  <span className="text-emerald-700 font-bold">~ {createdTenantResult.duration_days} Hari</span>
+                  <span className="text-slate-500">Masa Sewa Aktif:</span>
+                  <span className="text-emerald-700 font-bold">
+                    {formatTotalRentalDuration(
+                      createdTenantResult.created_at,
+                      createdTenantResult.expires_at,
+                      createdTenantResult.duration_days
+                    )}
+                  </span>
                 </div>
               </div>
             </div>

@@ -210,6 +210,13 @@ export class TokenService {
       };
     }
 
+    if (tenant.status === 'suspended') {
+      return {
+        success: false,
+        message: 'Akun toko sedang ditangguhkan (Suspended) oleh Master Admin. Silakan hubungi Master Admin untuk mengaktifkan akun.',
+      };
+    }
+
     // Eksekusi perpanjangan masa sewa tenant
     const amount = Number(tokenRow.amount);
     const unit = tokenRow.unit as DurationUnit;

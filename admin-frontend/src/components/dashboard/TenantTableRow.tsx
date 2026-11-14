@@ -9,9 +9,15 @@ import {
 } from 'lucide-react';
 import { Tenant } from '../../types/admin.types.ts';
 import { formatIndonesianPhone } from '../../utils/phoneHelper.ts';
+import {
+  formatCompactCountdown,
+  formatTotalRentalDuration,
+  formatExpiryDateTimeWIB,
+} from '../../utils/durationFormat.ts';
 
 interface TenantTableRowProps {
   tenant: Tenant;
+  nowMs: number;
   onImpersonate: (tenant: Tenant) => void;
   onOpenSendMessage: (tenant: Tenant) => void;
   onOpenExtend: (tenant: Tenant) => void;
@@ -22,6 +28,7 @@ interface TenantTableRowProps {
 
 export const TenantTableRow: React.FC<TenantTableRowProps> = ({
   tenant,
+  nowMs,
   onImpersonate,
   onOpenSendMessage,
   onOpenExtend,
@@ -31,6 +38,13 @@ export const TenantTableRow: React.FC<TenantTableRowProps> = ({
 }) => {
   const isExp = tenant.status === 'expired';
   const isSusp = tenant.status === 'suspended';
+  const countdown = formatCompactCountdown(tenant.expires_at, nowMs);
+  const totalDurationLabel = formatTotalRentalDuration(
+    tenant.created_at,
+    tenant.expires_at,
+    tenant.duration_days
+  );
+  const expiryDisplay = formatExpiryDateTimeWIB(tenant.expires_at, false);
 
   return (
     <tr className="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
@@ -125,23 +139,28 @@ export const TenantTableRow: React.FC<TenantTableRowProps> = ({
       {/* 7. Masa Sewa */}
       <td className="py-3.5 px-3.5 whitespace-nowrap">
         <div className="font-bold text-slate-900">
-          {tenant.duration_days || tenant.days_remaining || 30} Hari
+          {totalDurationLabel}
         </div>
-        {tenant.days_remaining !== undefined && (
-          <div className="text-[10px] text-slate-500">
-            Sisa {tenant.days_remaining} Hari
-          </div>
-        )}
+        <div
+          className={`text-[10px] font-mono tabular-nums mt-0.5 font-semibold ${
+            countdown.expired || countdown.isCritical
+              ? 'text-rose-600'
+              : countdown.isUrgent
+              ? 'text-amber-600'
+              : 'text-slate-500'
+          }`}
+        >
+          {countdown.expired ? 'Masa sewa habis' : `Sisa ${countdown.text}`}
+        </div>
       </td>
 
       {/* 8. Expired */}
       <td className="py-3.5 px-3.5 whitespace-nowrap">
         <div className="text-slate-700 font-medium text-xs">
-          {new Date(tenant.expires_at).toLocaleDateString('id-ID', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-          })}
+          {expiryDisplay.dateText}
+        </div>
+        <div className="text-[10px] font-mono tabular-nums text-slate-500 mt-0.5">
+          {expiryDisplay.timeText}
         </div>
       </td>
 

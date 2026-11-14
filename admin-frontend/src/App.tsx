@@ -14,15 +14,13 @@ import { ToggleSuspendModal } from './components/modals/ToggleSuspendModal.tsx';
 import { TabTemplates } from './components/dashboard/tabs/TabTemplates.tsx';
 import { TabTelegramAdmin } from './components/dashboard/tabs/TabTelegramAdmin.tsx';
 import { TabTokenManagement } from './components/dashboard/tabs/TabTokenManagement.tsx';
+import { TabPartnerApi } from './components/dashboard/tabs/TabPartnerApi.tsx';
+import { TabMasterSettings } from './components/dashboard/tabs/TabMasterSettings.tsx';
 import {
-  Building2,
-  ShieldCheck,
   Radio,
   BarChart3,
   CheckCircle2,
-  Phone,
   Server,
-  Layers,
 } from 'lucide-react';
 
 export default function App() {
@@ -115,9 +113,9 @@ export default function App() {
     }
 
     if (sortBy === 'duration_desc') {
-      result.sort((a, b) => (b.duration_days || b.days_remaining || 0) - (a.duration_days || a.days_remaining || 0));
+      result.sort((a, b) => new Date(b.expires_at).getTime() - new Date(a.expires_at).getTime());
     } else if (sortBy === 'duration_asc') {
-      result.sort((a, b) => (a.days_remaining ?? 9999) - (b.days_remaining ?? 9999));
+      result.sort((a, b) => new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime());
     } else if (sortBy === 'newest') {
       result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
@@ -203,6 +201,10 @@ export default function App() {
 
           {selectedNavTab === 'tokens' && (
             <TabTokenManagement showToast={showToast} />
+          )}
+
+          {selectedNavTab === 'partners' && (
+            <TabPartnerApi showToast={showToast} />
           )}
 
           {selectedNavTab === 'stats' && (
@@ -324,67 +326,7 @@ export default function App() {
           )}
 
           {selectedNavTab === 'settings' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto my-4">
-              <div className="p-6 bg-white border border-slate-200/90 rounded-2xl shadow-xs space-y-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-[#0084D1]/10 text-[#0084D1] flex items-center justify-center">
-                    <ShieldCheck className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Kontak Resmi Master Admin</h3>
-                    <p className="text-xs text-slate-500">Nomor WhatsApp rujukan saat akun disuspend atau expired</p>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Nomor WhatsApp Pengelola:</span>
-                    <a
-                      href="https://wa.me/6285712439395"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-mono text-[#0084D1] font-bold inline-flex items-center gap-1 hover:underline"
-                    >
-                      <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>+62 857-1243-9395</span>
-                    </a>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Peran Hak Akses:</span>
-                    <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      Super Admin (Owner)
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 bg-white border border-slate-200/90 rounded-2xl shadow-xs space-y-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-sky-50 text-[#0084D1] flex items-center justify-center">
-                    <Layers className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Arsitektur Multi-Tenant</h3>
-                    <p className="text-xs text-slate-500">Status basis data dan konfigurasi lingkungan</p>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Master Database:</span>
-                    <span className="font-mono text-slate-800 font-semibold">database/master.db</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Tenant Database:</span>
-                    <span className="font-mono text-slate-800 font-semibold">database/tenants/*.db</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Akses Master Portal:</span>
-                    <span className="font-mono text-slate-800 font-semibold">/admin/ (admin.wanma2.my.id)</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <TabMasterSettings onShowToast={showToast} />
           )}
         </main>
       </div>

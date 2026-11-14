@@ -48,7 +48,7 @@ export function useStoreConfig(
     `🛒 *RINCIAN PESANAN*\nHalo kak, silakan konfirmasi pesanan Anda:\n\n• *Produk:* {produkName}\n• *Varian:* {varian}\n• *Harga Normal:* Rp {price}\n\nPunya kode promo? Silakan pilih tombol di bawah untuk menggunakan diskon atau langsung bayar.`
   );
   const [confirmInputPromoText, setConfirmInputPromoText] = useState<string>(
-    `🎟️ *MASUKKAN KODE PROMO*\nSilakan ketik kode promo Anda (contoh: HEMAT10) atau ketik *BATAL* untuk melanjutkan dengan harga normal.\n\n⏱️ _Batas waktu: 90 detik._`
+    `🎟️ *MASUKKAN KODE PROMO*\nSilakan ketik kode promo Anda (contoh: HEMAT10) atau ketik *BATAL* untuk melanjutkan dengan harga normal.\n\n⏱️ _Batas waktu: 3 menit._`
   );
   const [confirmPromoSuccessText, setConfirmPromoSuccessText] = useState<string>(
     `🎉 *KODE PROMO BERHASIL DIGUNAKAN!*\n• *Kode Promo:* {promoCode}\n• *Harga Awal:* Rp {price}\n• *Potongan Diskon:* -Rp {discount}\n• *Total Bayar:* Rp {finalPrice}\n\nInvoice pembayaran QRIS sedang diterbitkan...`
@@ -92,7 +92,7 @@ export function useStoreConfig(
   );
   const [stockEmptyFooter, setStockEmptyFooter] = useState<string>('{storeName} • Info Ketersediaan Stok');
   const [sessionExpiredText, setSessionExpiredText] = useState<string>(
-    '⏱️ *SESI TRANSAKSI KEDALUWARSA*\nBatas waktu transaksi 90 detik telah berakhir karena tidak ada aktivitas respon.\n\nSesi pembelian ini dibatalkan secara otomatis demi keamanan sistem. Silakan ulangi pemesanan produk jika Anda masih ingin melanjutkan.'
+    '⏱️ *SESI TRANSAKSI KEDALUWARSA*\nBatas waktu transaksi 3 menit telah berakhir karena tidak ada aktivitas respon.\n\nSesi pembelian ini dibatalkan secara otomatis demi keamanan sistem. Silakan ulangi pemesanan produk jika Anda masih ingin melanjutkan.'
   );
   const [sessionExpiredFooter, setSessionExpiredFooter] = useState<string>('{storeName} • Auto-Timeout System');
   const [promoCancelledText, setPromoCancelledText] = useState<string>(

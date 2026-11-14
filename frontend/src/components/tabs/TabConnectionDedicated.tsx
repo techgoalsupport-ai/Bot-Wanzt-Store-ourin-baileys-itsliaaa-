@@ -186,6 +186,8 @@ export const TabConnectionDedicated: React.FC<TabConnectionDedicatedProps> = ({
 
   const statusInfo = getStatusBadge();
   const isSuspended = botData.accountStatus === 'suspended';
+  const isExpired = botData.accountStatus === 'expired';
+  const isAccountBlocked = isSuspended || isExpired;
 
   return (
     <div className="space-y-6">
@@ -199,6 +201,21 @@ export const TabConnectionDedicated: React.FC<TabConnectionDedicatedProps> = ({
             </h4>
             <p className="text-xs text-rose-700 leading-relaxed">
               Akun Anda saat ini sedang ditangguhkan (suspended) oleh Master Admin. Seluruh koneksi bot WhatsApp telah diputus dan pembuatan request pairing code baru diblokir.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Peringatan Masa Sewa Habis (Expired) */}
+      {isExpired && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 shadow-xs flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-950">
+              Masa Sewa Bot Kedaluwarsa (Expired)
+            </h4>
+            <p className="text-xs text-amber-800 leading-relaxed">
+              Koneksi bot WhatsApp Anda telah diputus karena masa aktif berakhir. Sesi penautan Anda tetap tersimpan. Silakan perpanjang masa aktif menggunakan kode token di tab Management Bot agar dapat terhubung kembali.
             </p>
           </div>
         </div>
@@ -234,9 +251,9 @@ export const TabConnectionDedicated: React.FC<TabConnectionDedicatedProps> = ({
             <button
               type="button"
               onClick={onReset}
-              disabled={loading || isSuspended}
+              disabled={loading || isAccountBlocked}
               className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-2xs ${
-                isSuspended
+                isAccountBlocked
                   ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed select-none'
                   : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700 cursor-pointer active:scale-95'
               }`}
@@ -470,11 +487,13 @@ export const TabConnectionDedicated: React.FC<TabConnectionDedicatedProps> = ({
                 botData.status === 'connecting' ||
                 botData.status === 'connected' ||
                 !isValidCode ||
-                isSuspended
+                isAccountBlocked
               }
               className={`w-full py-2.5 px-3 sm:px-4 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 ${
                 isSuspended
                   ? 'bg-rose-100 text-rose-700 border border-rose-300 cursor-not-allowed select-none shadow-none'
+                  : isExpired
+                  ? 'bg-amber-100 text-amber-800 border border-amber-300 cursor-not-allowed select-none shadow-none'
                   : botData.status === 'connected'
                   ? 'bg-emerald-600 text-white cursor-default opacity-90 shadow-xs'
                   : loading || botData.status === 'connecting'
@@ -491,6 +510,8 @@ export const TabConnectionDedicated: React.FC<TabConnectionDedicatedProps> = ({
                   className={`w-4 h-4 fill-current ${
                     isSuspended
                       ? 'text-rose-600'
+                      : isExpired
+                      ? 'text-amber-600'
                       : !isValidCode && botData.status !== 'connected'
                       ? 'text-slate-400'
                       : 'text-white'
@@ -500,6 +521,8 @@ export const TabConnectionDedicated: React.FC<TabConnectionDedicatedProps> = ({
               <span>
                 {isSuspended
                   ? 'Akun Ditangguhkan (Koneksi Diblokir)'
+                  : isExpired
+                  ? 'Masa Sewa Habis (Koneksi Diblokir)'
                   : botData.status === 'connected'
                   ? 'WhatsApp Bot Telah Terhubung'
                   : loading || botData.status === 'connecting'

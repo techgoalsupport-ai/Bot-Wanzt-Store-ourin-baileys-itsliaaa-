@@ -13,6 +13,7 @@ import { tenantTemplateRouter } from './routes/tenantTemplateRoutes.ts';
 import { tenantTokenRouter } from './routes/tenantTokenRoutes.ts';
 import { telegramRouter } from './routes/telegramRoutes.ts';
 import { adminRouter } from '../admin-backend/routes/adminRoutes.ts';
+import { partnerPublicRouter } from '../admin-backend/routes/partnerPublicRoutes.ts';
 import { initMasterDatabase } from '../admin-backend/database/masterSqlite.ts';
 import { initTenantDb } from './database/tenantDbManager.ts';
 import { initDatabase } from './database/sqlite.ts';
@@ -48,6 +49,9 @@ export function createServerApp(): Express {
     })
   );
   app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+
+  // Mount Partner REST API Publik sebelum middleware identifikasi sesi tenant
+  app.use('/api/v1/partner', partnerPublicRouter);
 
   // Middleware Identifikasi Tenant (Apartemen Multi-Tenancy)
   app.use((req: Request, _res: Response, next: NextFunction) => {

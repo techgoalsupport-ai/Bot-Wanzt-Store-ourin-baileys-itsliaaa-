@@ -105,6 +105,15 @@ export function initDatabase(): void {
     );
   `);
 
+  // 5b. Tabel Pengaturan Bot Umum (contoh: group_only)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bot_settings (
+      setting_key TEXT PRIMARY KEY,
+      setting_value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+
   // 6. Tabel Riwayat Transaksi (ACID, Indexed)
   db.exec(`
     CREATE TABLE IF NOT EXISTS transactions (

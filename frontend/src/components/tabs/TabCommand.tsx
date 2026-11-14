@@ -1236,7 +1236,7 @@ export const TabCommand: React.FC<TabCommandProps> = ({
                   <label className="text-xs font-semibold text-slate-800">
                     2. Template Permintaan Input Kode Promo
                   </label>
-                  <p className="text-[11px] text-slate-500">Pesan instruksi saat pembeli menekan tombol Pakai Kode Promo (waktu tunggu 90 detik).</p>
+                  <p className="text-[11px] text-slate-500">Pesan instruksi saat pembeli menekan tombol Pakai Kode Promo (waktu tunggu 3 menit).</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -1251,7 +1251,7 @@ export const TabCommand: React.FC<TabCommandProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      const defaultVal = `🎟️ *MASUKKAN KODE PROMO*\nSilakan ketik kode promo Anda (contoh: HEMAT10) atau ketik *BATAL* untuk melanjutkan dengan harga normal.\n\n⏱️ _Batas waktu: 90 detik._`;
+                      const defaultVal = `🎟️ *MASUKKAN KODE PROMO*\nSilakan ketik kode promo Anda (contoh: HEMAT10) atau ketik *BATAL* untuk melanjutkan dengan harga normal.\n\n⏱️ _Batas waktu: 3 menit._`;
                       setConfirmInputPromoText(defaultVal);
                       showToast('Instruksi promo direset ke default');
                     }}
@@ -1919,9 +1919,9 @@ export const TabCommand: React.FC<TabCommandProps> = ({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <label className="text-xs font-semibold text-slate-800">
-                    3. Template Peringatan Sesi Checkout Habis (Timeout 90s)
+                    3. Template Peringatan Sesi Checkout Habis (Timeout 3 Menit)
                   </label>
-                  <p className="text-[11px] text-slate-500">Peringatan saat pembeli mengabaikan konfirmasi order atau input kupon promo lebih dari 90 detik.</p>
+                  <p className="text-[11px] text-slate-500">Peringatan saat pembeli mengabaikan konfirmasi order atau input kupon promo lebih dari 3 menit.</p>
                 </div>
                 <div className="flex items-center gap-2 self-start sm:self-auto">
                   <button
@@ -1935,7 +1935,7 @@ export const TabCommand: React.FC<TabCommandProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      setSessionExpiredText('⏱️ *SESI TRANSAKSI KEDALUWARSA*\nBatas waktu transaksi 90 detik telah berakhir karena tidak ada aktivitas respon.\n\nSesi pembelian ini dibatalkan secara otomatis demi keamanan sistem. Silakan ulangi pemesanan produk jika Anda masih ingin melanjutkan.');
+                      setSessionExpiredText('⏱️ *SESI TRANSAKSI KEDALUWARSA*\nBatas waktu transaksi 3 menit telah berakhir karena tidak ada aktivitas respon.\n\nSesi pembelian ini dibatalkan secara otomatis demi keamanan sistem. Silakan ulangi pemesanan produk jika Anda masih ingin melanjutkan.');
                       showToast('Template sesi habis direset ke default');
                     }}
                     className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"

@@ -17,6 +17,7 @@ import { usePromos } from '../../hooks/usePromos';
 import { MandatoryStoreSetupModal } from '../modals/MandatoryStoreSetupModal';
 import { AddEditButtonModal } from '../modals/AddEditButtonModal';
 import { SuspendedAccountModal } from '../modals/SuspendedAccountModal';
+import { ExpiredAccountModal } from '../modals/ExpiredAccountModal';
 
 // Layout components
 import { DesktopSidebar } from '../layout/DesktopSidebar';
@@ -56,6 +57,7 @@ export function TenantDashboard({ auth }: TenantDashboardProps) {
     return auth.user?.accountStatus || 'active';
   });
   const [isSuspendModalDismissed, setIsSuspendModalDismissed] = useState<boolean>(false);
+  const [isExpireModalDismissed, setIsExpireModalDismissed] = useState<boolean>(false);
 
   // Callback sinkronisasi status akun secara real-time dari polling status bot
   const handleAccountStatusChange = useCallback((newStatus: 'active' | 'suspended' | 'expired') => {
@@ -65,6 +67,12 @@ export function TenantDashboard({ auth }: TenantDashboardProps) {
           // Begitu Master Admin mengubah status menjadi suspended, langsung reset dismiss
           // sehingga popup banned seketika muncul di layar tanpa refresh!
           setIsSuspendModalDismissed(false);
+        } else if (newStatus === 'expired') {
+          // Begitu masa sewa berakhir (expired), langsung munculkan popup expired
+          setIsExpireModalDismissed(false);
+        } else if (newStatus === 'active') {
+          setIsSuspendModalDismissed(false);
+          setIsExpireModalDismissed(false);
         }
         return newStatus;
       }
@@ -110,6 +118,28 @@ export function TenantDashboard({ auth }: TenantDashboardProps) {
       })
       .catch(() => {});
   }, []);
+
+  // Pantau expiresAt secara real-time: tepat saat waktu kedaluwarsa tercapai, langsung panggil refreshStatus()
+  // agar backend memutus koneksi bot & memunculkan popup expired tanpa menunggu interval berikutnya
+  useEffect(() => {
+    const expiresAtStr = botConn.botData.expiresAt;
+    if (!expiresAtStr || accountStatus !== 'active') return;
+
+    const expMs = new Date(expiresAtStr).getTime();
+    if (!Number.isFinite(expMs)) return;
+
+    const remainingMs = expMs - Date.now();
+    if (remainingMs <= 0) {
+      botConn.refreshStatus();
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      botConn.refreshStatus();
+    }, Math.min(remainingMs + 50, 2147483647));
+
+    return () => window.clearTimeout(timeoutId);
+  }, [botConn.botData.expiresAt, accountStatus, botConn.refreshStatus]);
 
 
   // 5. Whitelist Grup WhatsApp
@@ -244,7 +274,7 @@ export function TenantDashboard({ auth }: TenantDashboardProps) {
         />
 
         {/* Pop-up Modal Wajib Isi Store Info (Non-dismissible) */}
-        {!isStoreInfoComplete && accountStatus !== 'suspended' && (
+        {!isStoreInfoComplete && accountStatus === 'active' && (
           <MandatoryStoreSetupModal
             initialStoreInfo={storeConfig.storeInfo}
             onSuccess={(updated) => {
@@ -261,6 +291,27 @@ export function TenantDashboard({ auth }: TenantDashboardProps) {
             tenantUsername={auth.user?.username}
             onLogout={auth.logout}
             onCloseTemporary={() => setIsSuspendModalDismissed(true)}
+          />
+        )}
+
+        {/* Pop-up Modal Pemberitahuan Masa Sewa Habis / Expired (dengan form token & tutup sementara dev) */}
+        {accountStatus === 'expired' && !isExpireModalDismissed && (
+          <ExpiredAccountModal
+            storeName={storeConfig.storeInfo?.storeName || displayStoreName}
+            tenantUsername={auth.user?.username}
+            expiresAt={botConn.botData.expiresAt}
+            onLogout={auth.logout}
+            onCloseTemporary={() => setIsExpireModalDismissed(true)}
+            onTokenRedeemed={async (data) => {
+              setAccountStatus('active');
+              setIsExpireModalDismissed(false);
+              await botConn.refreshStatus();
+              showToast(
+                data?.addedDuration
+                  ? `Masa sewa diperpanjang +${data.addedDuration}! Bot siap dihubungkan kembali.`
+                  : 'Masa sewa berhasil diperpanjang! Bot siap dihubungkan kembali.'
+              );
+            }}
           />
         )}
 

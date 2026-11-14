@@ -23,7 +23,17 @@ export default defineConfig(() => {
     server: {
       port: 3001,
       host: '0.0.0.0',
-      hmr: false,
+      hmr: false as const,
+      ws: false as const,
+      watch: {
+        ignored: [
+          '**/database/**',
+          '**/backend/database/**',
+          '**/auth_info_baileys/**',
+          '**/backend/auth_info_baileys/**',
+          '**/*.log',
+        ],
+      },
       proxy: {
         '/api': {
           target: process.env.VITE_BACKEND_URL || 'http://localhost:5000',

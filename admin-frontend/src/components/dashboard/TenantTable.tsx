@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Tenant } from '../../types/admin.types.ts';
 import { TenantTableRow } from './TenantTableRow.tsx';
@@ -24,6 +24,15 @@ export const TenantTable: React.FC<TenantTableProps> = ({
   onOpenResetPassword,
   onOpenDelete,
 }) => {
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
     <section className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs">
       <div className="overflow-x-auto">
@@ -65,6 +74,7 @@ export const TenantTable: React.FC<TenantTableProps> = ({
                 <TenantTableRow
                   key={tenant.id}
                   tenant={tenant}
+                  nowMs={nowMs}
                   onImpersonate={onImpersonate}
                   onOpenSendMessage={onOpenSendMessage}
                   onOpenExtend={onOpenExtend}

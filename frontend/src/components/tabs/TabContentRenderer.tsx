@@ -152,6 +152,9 @@ export const TabContentRenderer: React.FC<TabContentRendererProps> = ({
         handleToggleGroup={groupsData.handleToggleGroup}
         copyGroupIdToClipboard={groupsData.copyGroupIdToClipboard}
         botStatus={botConn.botData.status}
+        groupOnly={groupsData.groupOnly}
+        isTogglingGroupOnly={groupsData.isTogglingGroupOnly}
+        handleToggleGroupOnly={groupsData.handleToggleGroupOnly}
       />
     );
   }

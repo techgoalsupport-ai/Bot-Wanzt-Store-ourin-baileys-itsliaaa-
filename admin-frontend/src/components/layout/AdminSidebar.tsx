@@ -14,9 +14,10 @@ import {
   LayoutTemplate,
   Send,
   Ticket,
+  KeyRound,
 } from 'lucide-react';
 
-export type AdminNavTab = 'units' | 'templates' | 'telegram' | 'tokens' | 'stats' | 'broadcast' | 'settings';
+export type AdminNavTab = 'units' | 'templates' | 'telegram' | 'tokens' | 'partners' | 'stats' | 'broadcast' | 'settings';
 
 interface AdminSidebarProps {
   selectedTab: AdminNavTab;
@@ -77,6 +78,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       label: 'Management Token',
       icon: Ticket,
       description: 'Voucher perpanjangan sewa',
+    },
+    {
+      id: 'partners',
+      label: 'Partner API',
+      icon: KeyRound,
+      description: 'API reseller & kolaborator',
     },
     {
       id: 'stats',

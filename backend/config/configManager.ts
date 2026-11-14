@@ -94,7 +94,7 @@ Punya kode promo? Silakan pilih tombol di bawah untuk menggunakan diskon atau la
 export const DEFAULT_CONFIRM_INPUT_PROMO_TEMPLATE = `🎟️ *MASUKKAN KODE PROMO*
 Silakan ketik kode promo Anda (contoh: HEMAT10) atau ketik *BATAL* untuk melanjutkan dengan harga normal.
 
-⏱️ _Batas waktu: 90 detik._`;
+⏱️ _Batas waktu: 3 menit._`;
 
 export const DEFAULT_CONFIRM_PROMO_SUCCESS_TEMPLATE = `🎉 *KODE PROMO BERHASIL DIGUNAKAN!*
 • *Kode Promo:* {promoCode}

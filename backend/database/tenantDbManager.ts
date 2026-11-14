@@ -180,6 +180,17 @@ export function migrateTenantDb(db: Database.Database): void {
       `).run();
     }
   } catch {}
+
+  // 8. Migrasi tabel bot_settings (untuk group_only)
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS bot_settings (
+        setting_key TEXT PRIMARY KEY,
+        setting_value TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+  } catch {}
 }
 
 /**
@@ -249,6 +260,15 @@ export function initTenantDbTables(db: Database.Database, tenantId: string): voi
     CREATE TABLE IF NOT EXISTS group_whitelist (
       group_id TEXT PRIMARY KEY,
       enabled INTEGER NOT NULL DEFAULT 1,
+      updated_at TEXT NOT NULL
+    );
+  `);
+
+  // 5b. Tabel Pengaturan Bot Umum (contoh: group_only)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bot_settings (
+      setting_key TEXT PRIMARY KEY,
+      setting_value TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
   `);

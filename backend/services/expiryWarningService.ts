@@ -2,6 +2,9 @@ import { getMasterDb } from '../../admin-backend/database/masterSqlite.ts';
 import { getBotManager } from '../botManager.ts';
 import { resolvePlaceholders } from '../services/placeholderHelper.ts';
 import { DEFAULT_EXPIRY_WARNING_OWNER_TEMPLATE } from '../config/configManager.ts';
+import { evaluateExpiryWarningStage } from './expiryWarningUtils.ts';
+import { MasterAdminContactService } from '../../admin-backend/services/masterAdminContactService.ts';
+import { TenantStatusService } from '../../admin-backend/services/tenantStatusService.ts';
 
 export interface ExpiryCheckResult {
   checkedCount: number;
@@ -19,8 +22,8 @@ export interface ExpiryCheckResult {
   timestamp: string;
 }
 
-const MASTER_ADMIN_WA = '6285712439395';
 let schedulerInterval: NodeJS.Timeout | null = null;
+let realtimeExpiryInterval: NodeJS.Timeout | null = null;
 let isChecking = false;
 
 /**
@@ -67,8 +70,9 @@ async function sendExpiryWarningMessage(
   stageLabel: string,
   formattedExpiry: string
 ): Promise<boolean> {
-  const directWaUrl = `https://wa.me/${MASTER_ADMIN_WA}?text=${encodeURIComponent(
-    `Halo Master Admin, saya owner dari *${tenant.store_name}* (${tenant.tenant_id}) ingin melakukan perpanjangan masa sewa bot WhatsApp toko kami.`
+  const pickedAdmin = MasterAdminContactService.pickRandomMasterAdmin();
+  const directWaUrl = `https://wa.me/${pickedAdmin.cleanPhone}?text=${encodeURIComponent(
+    `Halo Master Admin (${pickedAdmin.name}), saya owner dari *${tenant.store_name}* (${tenant.tenant_id}) ingin melakukan perpanjangan masa sewa bot WhatsApp toko kami.`
   )}`;
 
   let rawTemplate = DEFAULT_EXPIRY_WARNING_OWNER_TEMPLATE;
@@ -194,9 +198,6 @@ export async function checkAllTenantsExpiry(manualTrigger: boolean = false): Pro
     result.checkedCount = tenants.length;
     const nowMs = Date.now();
 
-    const HOUR_MS = 60 * 60 * 1000;
-    const DAY_MS = 24 * HOUR_MS;
-
     for (const tenant of tenants) {
       if (!tenant.expires_at) continue;
 
@@ -210,6 +211,7 @@ export async function checkAllTenantsExpiry(manualTrigger: boolean = false): Pro
           result.expiredCount++;
           console.log(`[Expiry Warning] Tenant ${tenant.tenant_id} (${tenant.store_name}) masa sewa telah habis. Status diubah ke expired.`);
         }
+        await TenantStatusService.disconnectBotForStatus(tenant.tenant_id, 'expired');
         continue;
       }
 
@@ -221,27 +223,19 @@ export async function checkAllTenantsExpiry(manualTrigger: boolean = false): Pro
       const formattedExpiry = formatIndonesianDateTime(tenant.expires_at);
       const toJid = formatWhatsAppJid(tenant.owner_phone);
 
-      // Tentukan apakah masuk ke salah satu dari 4 interval peringatan
-      let stage: 'h_1h' | 'h_5h' | 'h_1d' | 'h_3d' | null = null;
-      let stageLabel = '';
+      // Tentukan apakah masuk ke salah satu dari 4 jendela peringatan secara presisi
+      const stageMatch = evaluateExpiryWarningStage(diffMs, {
+        warned_3d: Number(tenant.warned_3d || 0),
+        warned_1d: Number(tenant.warned_1d || 0),
+        warned_5h: Number(tenant.warned_5h || 0),
+        warned_1h: Number(tenant.warned_1h || 0),
+      });
 
-      if (diffMs <= 1 * HOUR_MS && tenant.warned_1h === 0) {
-        stage = 'h_1h';
-        stageLabel = '1 Jam Lagi';
-      } else if (diffMs <= 5 * HOUR_MS && diffMs > 1 * HOUR_MS && tenant.warned_5h === 0) {
-        stage = 'h_5h';
-        stageLabel = '5 Jam Lagi';
-      } else if (diffMs <= 1 * DAY_MS && diffMs > 5 * HOUR_MS && tenant.warned_1d === 0) {
-        stage = 'h_1d';
-        stageLabel = '24 Jam (1 Hari) Lagi';
-      } else if (diffMs <= 3 * DAY_MS && diffMs > 1 * DAY_MS && tenant.warned_3d === 0) {
-        stage = 'h_3d';
-        stageLabel = '3 Hari Lagi';
-      }
-
-      if (!stage) {
+      if (!stageMatch) {
         continue;
       }
+
+      const { stage, stageLabel } = stageMatch;
 
       // Cari bot socket yang online untuk mengirim pesan
       const botSocketInfo = findAvailableBotSocket(tenant.tenant_id);
@@ -316,14 +310,23 @@ export async function checkAllTenantsExpiry(manualTrigger: boolean = false): Pro
 }
 
 /**
- * Menjalankan background scheduler cron setiap 5 menit
+ * Menjalankan background scheduler peringatan (5 menit) dan pemutusan real-time tenant expired (10 detik)
  */
 export function startExpiryWarningScheduler(): void {
+  if (!realtimeExpiryInterval) {
+    // Cek real-time kedaluwarsa setiap 10 detik (query lokal sangat ringan) agar bot langsung diputus walau dashboard tidak dibuka
+    realtimeExpiryInterval = setInterval(() => {
+      TenantStatusService.enforceAllExpiredTenants().catch((err) => {
+        console.error('[Realtime Expiry] Pengecekan berkala gagal:', err);
+      });
+    }, 10 * 1000);
+  }
+
   if (schedulerInterval) {
     return;
   }
 
-  console.log('[Expiry Warning] Background cron scheduler aktif (interval pengecekan: 5 menit).');
+  console.log('[Expiry Warning] Background cron scheduler aktif (warning: 5 menit, pemutusan expired real-time: 10 detik).');
 
   // Jalankan pengecekan pertama 20 detik setelah server hidup
   setTimeout(() => {
@@ -348,5 +351,9 @@ export function stopExpiryWarningScheduler(): void {
     clearInterval(schedulerInterval);
     schedulerInterval = null;
     console.log('[Expiry Warning] Background cron scheduler dihentikan.');
+  }
+  if (realtimeExpiryInterval) {
+    clearInterval(realtimeExpiryInterval);
+    realtimeExpiryInterval = null;
   }
 }

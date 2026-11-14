@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   KeyRound,
   ShieldCheck,
@@ -15,6 +15,13 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { BotStatusResponse } from '../../types/dashboard.types';
+import {
+  decomposeMilliseconds,
+  formatTotalRentalDuration,
+  calculateRemainingPercentage,
+  formatExpiryDateTimeWIB,
+  pad2,
+} from '../../utils/durationFormat';
 
 interface TabBotManagementProps {
   botData?: BotStatusResponse;
@@ -32,78 +39,42 @@ export const TabBotManagement: React.FC<TabBotManagementProps> = ({ botData, sho
     newTotalDays?: number;
   } | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const activeExpiry = redeemedDetails?.newExpiresAt || botData?.expiresAt;
+  const expiryTimeMs = activeExpiry ? new Date(activeExpiry).getTime() : NaN;
+  const countdown = Number.isFinite(expiryTimeMs)
+    ? decomposeMilliseconds(expiryTimeMs - nowMs)
+    : decomposeMilliseconds(0);
 
   // Status Bot: aktif, suspend, atau expired
   const rawStatus = botData?.accountStatus || 'active';
   const botStatus: 'aktif' | 'suspend' | 'expired' =
-    rawStatus === 'suspended' ? 'suspend' : rawStatus === 'expired' ? 'expired' : 'aktif';
+    rawStatus === 'suspended'
+      ? 'suspend'
+      : rawStatus === 'expired' || (Number.isFinite(expiryTimeMs) && countdown.expired && !redeemSuccess)
+      ? 'expired'
+      : 'aktif';
 
-  // Format tanggal Indonesia: contoh "Rabu, 30 Desember 2026"
-  const getFormattedExpiryDate = (dateString?: string) => {
-    let dateObj: Date;
-    if (dateString) {
-      dateObj = new Date(dateString);
-      if (isNaN(dateObj.getTime())) {
-        dateObj = new Date(Date.now() + 26 * 24 * 60 * 60 * 1000);
-      }
-    } else {
-      // Default pratinjau 26 hari ke depan
-      dateObj = new Date(Date.now() + 26 * 24 * 60 * 60 * 1000);
-    }
-
-    try {
-      return new Intl.DateTimeFormat('id-ID', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      }).format(dateObj);
-    } catch {
-      return dateObj.toLocaleDateString('id-ID');
-    }
-  };
-
-  // Kalkulasi sisa hari dan total masa aktif
-  // Format wajib: "[sisa hari]/[total hari] day", misal "26/30 day"
-  const calculateDays = () => {
-    // 1. Jika baru saja redeem voucher, utamakan data kembalian redeem riil
-    if (redeemedDetails?.newDaysRemaining !== undefined && redeemedDetails?.newTotalDays !== undefined) {
-      const remaining = redeemedDetails.newDaysRemaining;
-      const total = Math.max(redeemedDetails.newTotalDays, remaining, 1);
-      return { remaining, total };
-    }
-
-    // 2. Jika ada data riil dari botData backend
-    if (botData?.daysRemaining !== undefined && botData?.totalDays !== undefined) {
-      const remaining = botData.daysRemaining;
-      const total = Math.max(botData.totalDays, remaining, 1);
-      return { remaining, total };
-    }
-
-    // 3. Hitung dari selisih tanggal jika data expiresAt tersedia
-    const activeExpiry = redeemedDetails?.newExpiresAt || botData?.expiresAt;
-    if (activeExpiry) {
-      const expTime = new Date(activeExpiry).getTime();
-      const now = Date.now();
-      const diffMs = expTime - now;
-      const remainingDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-
-      let totalDays = remainingDays;
-      if (botData?.createdAt) {
-        const createdTime = new Date(botData.createdAt).getTime();
-        totalDays = Math.max(1, Math.ceil((expTime - createdTime) / (1000 * 60 * 60 * 24)));
-      }
-
-      totalDays = Math.max(totalDays, remainingDays, 1);
-      return { remaining: remainingDays, total: totalDays };
-    }
-
-    return { remaining: 26, total: 30 };
-  };
-
-  const { remaining: sisaHari, total: totalHari } = calculateDays();
-  const percentage = Math.min(100, Math.max(0, Math.round((sisaHari / totalHari) * 100)));
-  const formattedExpiry = getFormattedExpiryDate(redeemedDetails?.newExpiresAt || botData?.expiresAt);
+  const totalDurationLabel = formatTotalRentalDuration(
+    botData?.createdAt,
+    activeExpiry,
+    redeemedDetails?.newTotalDays ?? botData?.totalDays
+  );
+  const percentage = Number.isFinite(expiryTimeMs)
+    ? calculateRemainingPercentage(botData?.createdAt, activeExpiry, nowMs)
+    : 0;
+  const { dateText: formattedExpiry, timeText: formattedExpiryTime } = formatExpiryDateTimeWIB(
+    activeExpiry,
+    true
+  );
 
   // Auto format token saat mengetik (XXXX-XXXX-XXXX-XXXX)
   const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -288,7 +259,7 @@ export const TabBotManagement: React.FC<TabBotManagementProps> = ({ botData, sho
           </div>
         </div>
 
-        {/* Kartu 2: Masa Aktif (Format wajib: [sisa]/[total] day, misal 26/30 day) */}
+        {/* Kartu 2: Masa Aktif Real-Time (Hari, Jam, Menit, Detik) */}
         <div className="p-5 sm:p-6 bg-white border border-slate-200/90 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -300,17 +271,38 @@ export const TabBotManagement: React.FC<TabBotManagementProps> = ({ botData, sho
               </div>
             </div>
 
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-mono">
-                {sisaHari}/{totalHari} day
-              </span>
+            <div className="grid grid-cols-4 gap-2 pt-0.5">
+              <div>
+                <div className={`text-xl sm:text-2xl font-extrabold font-mono tabular-nums leading-none ${countdown.expired ? 'text-rose-600' : 'text-slate-900'}`}>
+                  {countdown.days}
+                </div>
+                <div className="text-[10px] font-semibold text-slate-500 mt-1">Hari</div>
+              </div>
+              <div>
+                <div className={`text-xl sm:text-2xl font-extrabold font-mono tabular-nums leading-none ${countdown.expired ? 'text-rose-600' : 'text-slate-900'}`}>
+                  {pad2(countdown.hours)}
+                </div>
+                <div className="text-[10px] font-semibold text-slate-500 mt-1">Jam</div>
+              </div>
+              <div>
+                <div className={`text-xl sm:text-2xl font-extrabold font-mono tabular-nums leading-none ${countdown.expired ? 'text-rose-600' : 'text-slate-900'}`}>
+                  {pad2(countdown.minutes)}
+                </div>
+                <div className="text-[10px] font-semibold text-slate-500 mt-1">Menit</div>
+              </div>
+              <div>
+                <div className={`text-xl sm:text-2xl font-extrabold font-mono tabular-nums leading-none ${countdown.expired ? 'text-rose-600' : 'text-[#0084D1]'}`}>
+                  {pad2(countdown.seconds)}
+                </div>
+                <div className="text-[10px] font-semibold text-slate-500 mt-1">Detik</div>
+              </div>
             </div>
 
             {/* Progress Bar Visual */}
             <div className="space-y-1.5 pt-1">
               <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-                <span>Sisa Durasi Tersedia</span>
-                <span className="font-mono text-slate-700">{percentage}%</span>
+                <span>Total Paket: {totalDurationLabel}</span>
+                <span className="font-mono tabular-nums text-slate-700">{percentage}%</span>
               </div>
               <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                 <div
@@ -328,7 +320,7 @@ export const TabBotManagement: React.FC<TabBotManagementProps> = ({ botData, sho
           </div>
         </div>
 
-        {/* Kartu 3: Tanggal Expired (Format: Hari, Tanggal Bulan Tahun) */}
+        {/* Kartu 3: Tanggal Expired Real-Time dari Server */}
         <div className="p-5 sm:p-6 bg-white border border-slate-200/90 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -341,16 +333,16 @@ export const TabBotManagement: React.FC<TabBotManagementProps> = ({ botData, sho
             </div>
 
             <div>
-              <span className="text-lg sm:text-xl font-bold text-slate-900 block leading-snug">
+              <span className="text-base sm:text-lg font-bold text-slate-900 block leading-snug">
                 {formattedExpiry}
               </span>
-              <span className="text-xs text-slate-500 mt-1 block">
-                Pukul 23:59 WIB (Asia/Jakarta)
+              <span className="text-xs font-mono tabular-nums text-slate-600 mt-1 block">
+                {formattedExpiryTime === '-' ? '-' : `Pukul ${formattedExpiryTime}`}
               </span>
             </div>
 
             <p className="text-xs text-slate-500 leading-relaxed">
-              Sistem akan otomatis mengirimkan pengingat perpanjangan sewa sebelum tanggal ini tiba.
+              Sistem akan otomatis mengirimkan pengingat perpanjangan sewa sebelum batas waktu berakhir.
             </p>
           </div>
         </div>

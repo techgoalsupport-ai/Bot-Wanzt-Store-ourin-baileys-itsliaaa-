@@ -28,8 +28,8 @@ export function getMasterAdminCleanPhone(phone: string = MASTER_ADMIN_PHONE): st
  * Menghasilkan tautan langsung WhatsApp ke Master Admin
  * Contoh: 'https://wa.me/6285712439395'
  */
-export function getMasterAdminWaLink(customMessage?: string): string {
-  const cleanPhone = getMasterAdminCleanPhone();
+export function getMasterAdminWaLink(customMessage?: string, phoneOverride?: string): string {
+  const cleanPhone = getMasterAdminCleanPhone(phoneOverride || MASTER_ADMIN_PHONE);
   const base = `https://wa.me/${cleanPhone}`;
   if (customMessage) {
     return `${base}?text=${encodeURIComponent(customMessage)}`;

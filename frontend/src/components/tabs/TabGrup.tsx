@@ -7,6 +7,8 @@ import {
   X,
   Check,
   Copy,
+  ShieldAlert,
+  ShieldCheck,
 } from 'lucide-react';
 import { WhatsAppGroupItem } from '../../types/dashboard.types';
 
@@ -22,6 +24,9 @@ interface TabGrupProps {
   handleToggleGroup: (groupId: string, currentEnabled: boolean) => void;
   copyGroupIdToClipboard: (groupId: string) => void;
   botStatus: string;
+  groupOnly: boolean;
+  isTogglingGroupOnly: boolean;
+  handleToggleGroupOnly: () => void;
 }
 
 export const TabGrup: React.FC<TabGrupProps> = ({
@@ -36,6 +41,9 @@ export const TabGrup: React.FC<TabGrupProps> = ({
   handleToggleGroup,
   copyGroupIdToClipboard,
   botStatus,
+  groupOnly,
+  isTogglingGroupOnly,
+  handleToggleGroupOnly,
 }) => {
   return (
     <div className="space-y-5">
@@ -81,6 +89,115 @@ export const TabGrup: React.FC<TabGrupProps> = ({
             <span className="text-[11px] font-mono">
               {botStatus === 'connected' ? 'Bot Terhubung' : 'Bot Offline'}
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Kartu Pengaturan Mode "Grup Only" & Rekomendasi Keamanan Anti-Banned WhatsApp */}
+      <div
+        className={`rounded-xl border p-4 transition-colors ${
+          groupOnly
+            ? 'bg-emerald-50/50 border-emerald-200'
+            : 'bg-white border-slate-200 shadow-2xs'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div
+              className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 mt-0.5 ${
+                groupOnly
+                  ? 'bg-emerald-100 border-emerald-200 text-emerald-700'
+                  : 'bg-amber-50 border-amber-200 text-amber-600'
+              }`}
+            >
+              {groupOnly ? (
+                <ShieldCheck className="w-4 h-4" />
+              ) : (
+                <ShieldAlert className="w-4 h-4" />
+              )}
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                  Grup Only
+                </h4>
+                <span
+                  data-testid="group-only-badge"
+                  className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                    groupOnly
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                  }`}
+                >
+                  {groupOnly ? 'ON' : 'OFF'}
+                </span>
+                {!groupOnly && (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                    Direkomendasikan Aktif
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                {groupOnly
+                  ? 'Status ON: Bot hanya dapat dipicu di dalam grup yang aktif dan akan diam total di chat pribadi (DM), kecuali kelanjutan sesi order (promo/bayar 3 menit) yang dimulai dari grup.'
+                  : 'Status OFF: Bot dapat dipicu di dalam grup yang aktif maupun langsung melalui chat pribadi (DM).'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between sm:justify-end gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
+            <span className="text-xs font-semibold text-slate-700 sm:hidden">
+              Mode Grup Only
+            </span>
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-[11px] font-mono font-bold ${
+                  groupOnly ? 'text-emerald-700' : 'text-slate-500'
+                }`}
+              >
+                {groupOnly ? 'ON' : 'OFF'}
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-label="Grup Only"
+                aria-checked={groupOnly}
+                data-testid="toggle-group-only"
+                disabled={isTogglingGroupOnly}
+                onClick={handleToggleGroupOnly}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-600/30 ${
+                  groupOnly ? 'bg-emerald-500' : 'bg-slate-300'
+                } ${isTogglingGroupOnly ? 'opacity-60 cursor-wait' : ''}`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    groupOnly ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Pemberitahuan Rekomendasi Keamanan Akun WhatsApp */}
+        <div
+          className={`mt-3 rounded-lg border px-3 py-2.5 text-[11.5px] leading-relaxed flex items-start gap-2.5 ${
+            groupOnly
+              ? 'bg-emerald-100/50 border-emerald-200/80 text-emerald-900'
+              : 'bg-amber-50 border-amber-200/90 text-amber-900'
+          }`}
+        >
+          <AlertCircle
+            className={`w-4 h-4 shrink-0 mt-0.5 ${
+              groupOnly ? 'text-emerald-600' : 'text-amber-600'
+            }`}
+          />
+          <div>
+            <span className="font-semibold">
+              {groupOnly ? 'Proteksi Aktif: ' : 'Peringatan & Rekomendasi: '}
+            </span>
+            Disarankan untuk mengaktifkan tombol <strong>Grup Only (ON)</strong>. Saat ini WhatsApp semakin ketat melakukan pemblokiran atau penangguhan terhadap nomor yang terdeteksi beroperasi sebagai bot di chat pribadi (DM). Saat mode ini aktif, bot tidak membalas perintah apa pun di DM, namun alur checkout order yang dimulai dari grup (konfirmasi promo, pembayaran QRIS, dan tombol Hubungi Admin) tetap berjalan normal.
           </div>
         </div>
       </div>

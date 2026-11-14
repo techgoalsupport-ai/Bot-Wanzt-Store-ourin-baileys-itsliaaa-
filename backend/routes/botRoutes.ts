@@ -3,14 +3,15 @@ import { botManager } from '../botManager.ts';
 import { loadStoreInfo } from '../config/configManager.ts';
 import { getActiveTenantId } from '../database/tenantContext.ts';
 import { TenantManager } from '../../admin-backend/services/tenantManager.ts';
+import { TenantStatusService } from '../../admin-backend/services/tenantStatusService.ts';
 
 export const botRouter = Router();
 
-// Status bot saat ini (dilengkapi accountStatus real-time dari master.db)
-botRouter.get('/status', (_req: Request, res: Response) => {
+// Status bot saat ini (dilengkapi accountStatus real-time dari master.db + auto-disconnect saat expired)
+botRouter.get('/status', async (_req: Request, res: Response) => {
   const tenantId = getActiveTenantId();
+  const accountStatus = await TenantStatusService.enforceRealtimeTenantExpiry(tenantId);
   const tenant = TenantManager.getTenant(tenantId);
-  const accountStatus = tenant?.status || 'active';
   const botStatus = botManager.getStatus();
 
   const daysRemaining = tenant?.days_remaining ?? 0;
@@ -41,18 +42,18 @@ botRouter.get('/groups', async (_req: Request, res: Response) => {
 botRouter.post('/start', async (req: Request, res: Response) => {
   try {
     const tenantId = getActiveTenantId();
-    const tenant = TenantManager.getTenant(tenantId);
+    const accountStatus = await TenantStatusService.enforceRealtimeTenantExpiry(tenantId);
 
     // 1. HARD GUARD: Blokir total jika akun sedang suspended atau expired
-    if (tenant && tenant.status !== 'active') {
-      const isSuspended = tenant.status === 'suspended';
+    if (accountStatus !== 'active') {
+      const isSuspended = accountStatus === 'suspended';
       return res.status(403).json({
         success: false,
         suspended: isSuspended,
-        expired: tenant.status === 'expired',
+        expired: accountStatus === 'expired',
         error: isSuspended
           ? 'Akses Ditolak: Akun toko Anda sedang ditangguhkan (Suspended) oleh Master Admin. Seluruh permintaan koneksi WhatsApp dinonaktifkan.'
-          : 'Akses Ditolak: Masa sewa bot Anda telah kedaluwarsa (Expired). Silakan hubungi Master Admin untuk memperpanjang masa sewa.',
+          : 'Akses Ditolak: Masa sewa bot Anda telah kedaluwarsa (Expired). Silakan perpanjang masa aktif menggunakan token voucher atau hubungi Master Admin.',
       });
     }
 
@@ -93,12 +94,16 @@ botRouter.post('/stop', async (_req: Request, res: Response) => {
 botRouter.post('/reset', async (_req: Request, res: Response) => {
   try {
     const tenantId = getActiveTenantId();
-    const tenant = TenantManager.getTenant(tenantId);
-    if (tenant && tenant.status !== 'active') {
+    const accountStatus = await TenantStatusService.enforceRealtimeTenantExpiry(tenantId);
+    if (accountStatus !== 'active') {
+      const isSuspended = accountStatus === 'suspended';
       return res.status(403).json({
         success: false,
-        suspended: tenant.status === 'suspended',
-        error: 'Akses Ditolak: Akun toko Anda sedang ditangguhkan (Suspended).',
+        suspended: isSuspended,
+        expired: accountStatus === 'expired',
+        error: isSuspended
+          ? 'Akses Ditolak: Akun toko Anda sedang ditangguhkan (Suspended).'
+          : 'Akses Ditolak: Masa sewa bot Anda telah kedaluwarsa (Expired). Silakan perpanjang masa aktif terlebih dahulu.',
       });
     }
 
@@ -110,15 +115,19 @@ botRouter.post('/reset', async (_req: Request, res: Response) => {
 });
 
 // Simpan konfigurasi bot
-botRouter.post('/save-config', (req: Request, res: Response) => {
+botRouter.post('/save-config', async (req: Request, res: Response) => {
   try {
     const tenantId = getActiveTenantId();
-    const tenant = TenantManager.getTenant(tenantId);
-    if (tenant && tenant.status !== 'active') {
+    const accountStatus = await TenantStatusService.enforceRealtimeTenantExpiry(tenantId);
+    if (accountStatus !== 'active') {
+      const isSuspended = accountStatus === 'suspended';
       return res.status(403).json({
         success: false,
-        suspended: tenant.status === 'suspended',
-        error: 'Akses Ditolak: Akun toko Anda sedang ditangguhkan (Suspended).',
+        suspended: isSuspended,
+        expired: accountStatus === 'expired',
+        error: isSuspended
+          ? 'Akses Ditolak: Akun toko Anda sedang ditangguhkan (Suspended).'
+          : 'Akses Ditolak: Masa sewa bot Anda telah kedaluwarsa (Expired). Silakan perpanjang masa aktif terlebih dahulu.',
       });
     }
 
@@ -148,3 +157,45 @@ botRouter.post('/groups/toggle', (req: Request, res: Response) => {
     return res.status(500).json({ error: err?.message || 'Gagal mengubah status grup' });
   }
 });
+
+// Ambil status pengaturan Grup Only (default OFF)
+botRouter.get('/groups/group-only', (_req: Request, res: Response) => {
+  try {
+    const groupOnly = botManager.getGroupOnlySetting();
+    return res.json({
+      success: true,
+      groupOnly,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err?.message || 'Gagal mengambil pengaturan Grup Only' });
+  }
+});
+
+// Ubah status pengaturan Grup Only (ON/OFF)
+botRouter.post('/groups/group-only', async (req: Request, res: Response) => {
+  try {
+    const tenantId = getActiveTenantId();
+    const accountStatus = await TenantStatusService.enforceRealtimeTenantExpiry(tenantId);
+    if (accountStatus !== 'active') {
+      const isSuspended = accountStatus === 'suspended';
+      return res.status(403).json({
+        success: false,
+        suspended: isSuspended,
+        expired: accountStatus === 'expired',
+        error: isSuspended
+          ? 'Akses Ditolak: Akun toko Anda sedang ditangguhkan (Suspended).'
+          : 'Akses Ditolak: Masa sewa bot Anda telah kedaluwarsa (Expired). Silakan perpanjang masa aktif terlebih dahulu.',
+      });
+    }
+
+    const { enabled } = req.body || {};
+    const groupOnly = botManager.setGroupOnlySetting(Boolean(enabled));
+    return res.json({
+      success: true,
+      groupOnly,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err?.message || 'Gagal memperbarui pengaturan Grup Only' });
+  }
+});
+

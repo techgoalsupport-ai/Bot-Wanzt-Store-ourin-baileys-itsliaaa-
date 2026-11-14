@@ -1,10 +1,7 @@
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import express from 'express';
-import { createServer as createViteServer } from 'vite';
-import { serverApp } from './backend/app.ts';
-import { startExpiryWarningScheduler } from './backend/services/expiryWarningService.ts';
+import http from 'node:http';
+import path from 'node:path';
+import fs from 'node:fs';
+import type { Express } from 'express';
 
 const __dirname = import.meta.dirname;
 
@@ -16,38 +13,72 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('[Wanzt Store] Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-async function startServer() {
-  let PORT = parseInt(process.env.PORT || '3000', 10);
-  const portArgIndex = process.argv.indexOf('--port');
-  if (portArgIndex !== -1 && process.argv[portArgIndex + 1]) {
-    const parsed = parseInt(process.argv[portArgIndex + 1], 10);
-    if (!isNaN(parsed)) PORT = parsed;
+function resolvePort(): number {
+  const args = process.argv.slice(2);
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--port' && args[i + 1]) {
+      const parsed = parseInt(args[i + 1], 10);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+    if (arg.startsWith('--port=')) {
+      const parsed = parseInt(arg.slice('--port='.length), 10);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
   }
 
-  const isProduction = process.env.NODE_ENV === 'production';
+  // Di environment Cloud Run/container, PORT sering diset ke port Nginx (8080).
+  // Gunakan DEFAULT_APP_PORT (3000) atau abaikan PORT jika sama dengan NGINX_PORT.
+  const nginxPort = process.env.NGINX_PORT || '8080';
+  const candidate =
+    process.env.APP_PORT ||
+    process.env.DEFAULT_APP_PORT ||
+    (process.env.PORT && process.env.PORT !== nginxPort ? process.env.PORT : '3000');
 
-  if (!isProduction) {
-    // Mode Development: Inisialisasi Vite dev server untuk Tenant (frontend) dan Master Admin (admin-frontend)
-    // HMR dinonaktifkan (hmr: false) sesuai batasan runtime environment agar tidak membuka port socket liar
-    const viteTenant = await createViteServer({
-      root: path.resolve(__dirname, 'frontend'),
-      server: {
-        middlewareMode: true,
-        hmr: false,
-      },
-      appType: 'spa',
-    });
+  const parsed = parseInt(candidate, 10);
+  return !isNaN(parsed) && parsed > 0 ? parsed : 3000;
+}
 
-    const viteAdmin = await createViteServer({
-      root: path.resolve(__dirname, 'admin-frontend'),
-      base: '/admin/',
-      configFile: path.resolve(__dirname, 'admin-frontend', 'vite.config.ts'),
-      server: {
-        middlewareMode: true,
-        hmr: false,
-      },
-      appType: 'spa',
-    });
+async function initializeFullApp(isProduction: boolean): Promise<Express> {
+  const [
+    { default: express },
+    { serverApp },
+    { startExpiryWarningScheduler },
+    viteModule,
+  ] = await Promise.all([
+    import('express'),
+    import('./backend/app.ts'),
+    import('./backend/services/expiryWarningService.ts'),
+    !isProduction ? import('vite') : Promise.resolve(null),
+  ]);
+
+  if (!isProduction && viteModule) {
+    const { createServer: createViteServer } = viteModule;
+
+    // Mode Development: Inisialisasi Vite dev server untuk Tenant (frontend) dan Master Admin (admin-frontend) secara paralel.
+    // HMR dan WebSocket (hmr: false, ws: false) dinonaktifkan sesuai batasan runtime environment agar tidak bentrok di port 24678.
+    const [viteTenant, viteAdmin] = await Promise.all([
+      createViteServer({
+        root: path.resolve(__dirname, 'frontend'),
+        server: {
+          middlewareMode: true,
+          hmr: false,
+          ws: false,
+        },
+        appType: 'spa',
+      }),
+      createViteServer({
+        root: path.resolve(__dirname, 'admin-frontend'),
+        base: '/admin/',
+        configFile: path.resolve(__dirname, 'admin-frontend', 'vite.config.ts'),
+        server: {
+          middlewareMode: true,
+          hmr: false,
+          ws: false,
+        },
+        appType: 'spa',
+      }),
+    ]);
 
     serverApp.use((req, res, next) => {
       // Lewati rute API
@@ -78,6 +109,13 @@ async function startServer() {
       : path.resolve(__dirname, 'dist');
     const distAdmin = path.resolve(__dirname, 'dist-admin');
 
+    if (fs.existsSync(distAdmin)) {
+      serverApp.use('/admin', express.static(distAdmin));
+    }
+    if (fs.existsSync(distTenant)) {
+      serverApp.use(express.static(distTenant));
+    }
+
     serverApp.use((req, res, next) => {
       if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
 
@@ -97,14 +135,79 @@ async function startServer() {
     });
   }
 
-  serverApp.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Wanzt Store] Server berjalan di http://0.0.0.0:${PORT}`);
-    console.log(`[Wanzt Store] Mode: ${isProduction ? 'Production' : 'Development'}`);
-    try {
-      startExpiryWarningScheduler();
-    } catch (schedErr) {
-      console.error('[Wanzt Store] Gagal memulai scheduler masa sewa:', schedErr);
+  try {
+    startExpiryWarningScheduler();
+  } catch (schedErr) {
+    console.error('[Wanzt Store] Gagal memulai scheduler masa sewa:', schedErr);
+  }
+
+  return serverApp;
+}
+
+function startServer() {
+  const port = resolvePort();
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  let readyApp: Express | null = null;
+  let initError: unknown = null;
+
+  const readyPromise = initializeFullApp(isProduction)
+    .then((app) => {
+      readyApp = app;
+      return app;
+    })
+    .catch((err) => {
+      initError = err;
+      console.error('[Wanzt Store] Gagal menginisialisasi aplikasi:', err);
+      throw err;
+    });
+
+  const httpServer = http.createServer(async (req, res) => {
+    const reqUrl = req.url || '/';
+    if (reqUrl === '/api/health' || reqUrl.startsWith('/api/health?')) {
+      if (initError) {
+        res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(
+          JSON.stringify({
+            status: 'error',
+            service: 'bot-wanzt-backend',
+            timestamp: new Date().toISOString(),
+          })
+        );
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(
+        JSON.stringify({
+          status: 'ok',
+          service: 'bot-wanzt-backend',
+          ready: Boolean(readyApp),
+          timestamp: new Date().toISOString(),
+        })
+      );
+      return;
     }
+
+    try {
+      const app = readyApp ?? (await readyPromise);
+      app(req as any, res as any);
+    } catch (err) {
+      console.error('[Wanzt Store] Request gagal saat inisialisasi:', err);
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ error: 'Server initialization failed' }));
+      }
+    }
+  });
+
+  httpServer.on('error', (err) => {
+    console.error(`[Wanzt Store] Server error pada port ${port}:`, err);
+    process.exit(1);
+  });
+
+  httpServer.listen(port, '0.0.0.0', () => {
+    console.log(`[Wanzt Store] Server berjalan di http://0.0.0.0:${port}`);
+    console.log(`[Wanzt Store] Mode: ${isProduction ? 'Production' : 'Development'}`);
   });
 }
 

@@ -899,34 +899,35 @@ Dashboard bot bersih dari tombol master admin saat sedang digunakan oleh tenant 
 
 [26.0] - PERANCANGAN DAN PENGEMBANGAN REST API KOLABORATOR (PARTNER / RESELLER API) UNTUK PENJUALAN SEWA BOT OTOMATIS
 
-- Tanggal: 2026-11-07 05:46
-- Status: Planned
+- Tanggal: 2026-11-12 16:30
+- Status: Completed
 
 Tujuan:
-Membuka kanal integrasi bagi mitra kolaborasi/reseller agar dapat menjual jasa sewa bot WhatsApp secara otomatis melalui antarmuka REST API publik berotentikasi, di mana server secara instan membuat akun unit bot baru dan mengembalikan kredensial (ID tenant, username, password, dan masa aktif sewa) langsung ke sistem kolaborator.
+Membuka kanal integrasi bagi mitra kolaborasi/reseller agar dapat menjual jasa sewa bot WhatsApp dan token perpanjangan masa sewa secara otomatis melalui antarmuka REST API publik berotentikasi, sementara akses dashboard manajemen tetap menggunakan 1 akun Master Admin bersama tanpa pemisahan role.
 
-Rencana:
-1. Tahap 1: Perancangan Skema Database Kemitraan (database/master.db):
-   - Tabel `collaborator_api_keys`: id, name, api_key_hash, prefix_key, status (active/suspended), quota_or_balance, created_at, webhook_url.
-   - Tabel `collaborator_logs`: id, collaborator_id, tenant_id, duration_days, timestamp, request_ip.
+Rencana yang Disepakati:
+1. Tahap 1: Perancangan Skema Database Kemitraan (`database/master.db`):
+   - Tabel `collaborator_api_keys`: `id`, `name`, `api_key_hash` (SHA-256), `prefix_key`, `status` (`active` / `suspended`), `last_used_at`, `created_at`. Unlimited penggunaan selama status API Key `active`.
+   - Tabel `collaborator_logs`: `id`, `collaborator_id`, `collaborator_name`, `action_type` (`create_tenant` / `create_token`), `target_id` (`tenant_id` atau `token_code`), `duration_label`, `request_ip`, `created_at`.
 2. Tahap 2: Middleware Keamanan & Autentikasi API Key:
-   - Header autentikasi `x-api-key` atau `Bearer <token>` dengan verifikasi cepat dan aman.
-   - Fitur rate limiting untuk mencegah serangan brute force / spam pembuatan akun.
-3. Tahap 3: Pembuatan Endpoint REST API Publik Mitra:
-   - `POST /api/v1/partner/tenants/create`: Menerima parameter durasi hari sewa, nama toko (opsional), nama owner (opsional), no wa owner (opsional).
-   - Memanggil `TenantService.createTenant()` yang telah memiliki kemampuan auto-generate ID bot, username terstruktur, dan password acak.
-   - Mengembalikan respon JSON terstruktur berisi: status, tenant_id, username, password, days_active, expires_at, login_url, dan pesan panduan.
-   - Endpoint pendukung: `GET /api/v1/partner/tenants/:id` (cek status masa aktif tenant) dan `POST /api/v1/partner/tenants/:id/extend` (perpanjang masa sewa oleh reseller).
-4. Tahap 4: Antarmuka Manajemen Kolaborator di Dashboard Master Admin (admin-frontend):
-   - Menu kelola API Key Kolaborator di tab Pengaturan Master / Tab Kemitraan: Generate API Key baru, pantau unit yang dibuat oleh masing-masing kolaborator, dan status kemitraan.
+   - Mendukung header autentikasi `x-api-key` atau `Authorization: Bearer <api_key>`.
+   - Rute `/api/v1/partner/*` di-mount sebelum middleware sesi dashboard tenant di `backend/app.ts` agar token API Partner tidak bentrok dengan token sesi tenant.
+   - Fitur rate limiting (sliding window per API Key / IP) untuk mencegah spam atau brute force.
+3. Tahap 3: Pembuatan 2 Endpoint REST API Publik Mitra:
+   - `POST /api/v1/partner/tenants/create`: Membuat akun unit bot baru otomatis via `TenantService.createTenant()`, mendukung durasi fleksibel (`duration_value` & `duration_unit`: `minutes`, `hours`, `days`, `weeks`, `months`, atau `duration_days`) serta `store_name`, `owner_name`, `owner_phone` opsional. Mengembalikan JSON berisi `tenant_id`, `username`, `password`, `expires_at`, dan `login_url`.
+   - `POST /api/v1/partner/tokens/create`: Membuat kode token voucher perpanjangan sekali pakai (`DDMM-XXXX-XXDA-XXXX`) via `TokenService.createToken()`, mendukung `amount` dan `unit` (`minutes`, `hours`, `days`, `months`). Mengembalikan JSON berisi `token_code`, `duration_label`, `status`, dan `created_at`.
+   - Endpoint perpanjang langsung dan cek status tenant via API tidak disertakan karena partner berbagi akses Master Admin dashboard yang sama.
+4. Tahap 4: Antarmuka Manajemen Kolaborator di Dashboard Master Admin (`admin-frontend`):
+   - Tab baru **"Partner API"** pada `AdminSidebar.tsx` dan `AdminHeader.tsx`.
+   - Fitur buat API Key baru (key asli ditampilkan 1 kali pada modal aman dengan tombol salin), aktifkan/suspend API Key, hapus API Key, dan riwayat log aktivitas pembuatan akun/token oleh masing-masing partner.
 5. Tahap 5: Dokumentasi Integrasi Resmi untuk Kolaborator:
-   - Format contoh request (cURL, NodeJS/Axios, PHP/cURL, Python) dan format respon JSON sukses/gagal.
+   - Panel/tab dokumentasi interaktif langsung di halaman Partner API berisi contoh request (cURL, Node.js/Axios, PHP/cURL, Python) dan format respon JSON sukses/gagal.
 6. Tahap 6: Pengujian dan Verifikasi:
-   - Uji coba pembuatan akun via request API eksternal (Postman/curl).
-   - Verifikasi isolasi database tenant yang terbentuk dan kesiapan login di dashboard bot.
+   - Unit test logika hashing, rate limiting, dan validasi durasi via `node:test`.
+   - Uji coba pembuatan tenant & token via cURL dan verifikasi UI di browser headless.
 
 Hasil yang Diharapkan:
-Kolaborator atau reseller dapat mengintegrasikan penjualan sewa bot ke sistem kasir/website mereka sendiri secara otomatis 24/7 tanpa perlu intervensi manual dari Master Admin.
+Kolaborator atau reseller dapat mengintegrasikan penjualan sewa bot dan voucher perpanjangan ke sistem mereka sendiri secara otomatis 24/7 menggunakan API Key unlimited selama aktif, sekaligus tetap dapat mengelola dashboard Master Admin bersama.
 
 ---
 
@@ -1062,3 +1063,148 @@ Rencana:
 
 Hasil yang Diharapkan:
 Seluruh respon pesan bot dapat dikustomisasi 100% oleh masing-masing tenant, Master Admin dapat menyediakan template bawaan berkualitas tinggi untuk tiap kategori, dan setiap pesan kaya akan placeholder dinamis yang akurat.
+
+---
+
+[31.0] - PEMBARUAN TAMPILAN MASA SEWA REAL-TIME SPESIFIK (HARI, JAM, MENIT, DETIK) DI DASHBOARD MASTER & DASHBOARD BOT
+
+- Tanggal: 2026-11-12 18:16
+- Status: Completed
+
+Tujuan:
+Menggantikan tampilan masa sewa yang sebelumnya terkunci pada satuan Hari bulat dengan tampilan hitung mundur real-time yang spesifik (Hari, Jam, Menit, dan Detik) beserta jam kedaluwarsa asli pada Dashboard Master Admin maupun Dashboard Bot Tenant.
+
+Rencana yang Disepakati:
+1. Tahap 1: Penyusunan Utilitas Penghitung Durasi & Unit Test:
+   - Membuat modul utilitas murni `durationFormat.ts` (+ unit test via `node:test`) untuk mengurai selisih milidetik (`expires_at - now`) menjadi `{ days, hours, minutes, seconds, expired }`, memformat total paket durasi secara fleksibel (Detik/Menit/Jam/Hari), menghitung persentase bar berbasis milidetik riil, dan memformat jam kedaluwarsa WIB yang akurat.
+2. Tahap 2: Pembaharuan Backend Akurasi Sorting & Estimasi:
+   - Memperbaiki kalkulasi pengurutan durasi di `App.tsx` (berdasar timestamp `expires_at` / sisa milidetik riil, bukan hari bulat agar durasi < 1 hari tetap akurat terurut) serta memastikan `TenantService` dan `AddTenantModal.tsx` menampilkan estimasi durasi spesifik tanpa membulatkan sewa menit/jam ke 1 Hari.
+3. Tahap 3: Pembaharuan Dashboard Master Admin (`admin-frontend`):
+   - Memasang 1 timer ticker bersama per 1 detik di `TenantTable.tsx` untuk memicu pembaruan countdown tanpa duplikasi interval per baris.
+   - Memperbarui kolom **Masa Sewa** pada `TenantTableRow.tsx` dengan format ringkas (misal `29h 14j 32m 08d`, `05j 12m 44d`, `14m 09d`) memakai `font-mono tabular-nums`, dan menampilkan jam kedaluwarsa spesifik (misal `18:15 WIB`) pada kolom **Expired**.
+4. Tahap 4: Pembaharuan Dashboard Bot Tenant (`frontend`):
+   - Memperbarui `TabBotManagement.tsx` dengan timer ticker 1 detik real-time.
+   - Mengganti format lama `.../... day` pada kartu **Masa Aktif** menjadi tampilan spesifik **Hari, Jam, Menit, Detik** real-time (lengkap dengan info total durasi fleksibel dan progress bar akurat berbasis milidetik).
+   - Menghapus teks statis `Pukul 23:59 WIB` pada kartu **Tanggal Expired** dan menggantinya dengan waktu kedaluwarsa asli (`HH:mm:ss WIB`) dari server.
+5. Tahap 5: Pengujian & Verifikasi:
+   - Unit test `durationFormat.test.ts` via `node:test`.
+   - Verifikasi `compile_applet`, `lint_applet`, serta pengujian tampilan live countdown pada browser headless untuk Dashboard Master (`/admin/`) dan Dashboard Bot (`/`).
+
+Hasil yang Diharapkan:
+Admin dan pemilik toko dapat memantau sisa masa sewa secara presisi hingga level jam, menit, dan detik secara real-time untuk seluruh skenario durasi sewa (mulai hitungan menit/jam hingga tahunan).
+
+---
+
+[32.0] - PERBAIKAN AKURASI TAHAP DAN LABEL PERINGATAN KEDALUWARSA OTOMATIS (EXPIRY WARNING)
+
+- Tanggal: 2026-11-12 18:57
+- Status: Completed
+
+Tujuan:
+Memperbaiki bug pada sistem peringatan kedaluwarsa otomatis di `expiryWarningService.ts` agar sisa masa aktif 1 jam tidak salah mengirim pesan peringatan "5 Jam Lagi", dan sisa masa aktif 1 hari tidak salah mengirim pesan peringatan "3 Hari Lagi".
+
+Rencana:
+1. Tahap 1: Utilitas Evaluasi Stage & Formatter Sisa Waktu Dinamis (`backend/services/expiryWarningUtils.ts` + unit test):
+   - Memisahkan rentang pemicu tiap tahap peringatan (`h_3d`, `h_1d`, `h_5h`, `h_1h`) dengan jendela target yang akurat plus toleransi polling cron 5 menit (`CRON_GRACE_MS`).
+   - Memastikan sisa waktu ~1 jam (termasuk toleransi di atas 1 jam seperti 1 jam 5 menit) langsung masuk tahap `h_1h` (bukan `h_5h`), dan sisa waktu ~1 hari langsung masuk tahap `h_1d` (bukan `h_3d`).
+   - Menghitung teks `{remainingTime}` secara dinamis berdasarkan sisa waktu riil (`diffMs`), tidak lagi menempelkan teks statis batas atas untuk seluruh rentang di bawahnya.
+2. Tahap 2: Integrasi Service & Presisi Kalkulasi Durasi:
+   - Memperbarui `backend/services/expiryWarningService.ts` menggunakan `evaluateExpiryWarningStage`.
+   - Memperbarui `admin-backend/services/tenantService.ts` (`calculateExpirationDate`) agar satuan menit, jam, hari, dan minggu dihitung dengan milidetik pasti tanpa pergeseran DST zona waktu OS.
+3. Tahap 3: Pengujian & Dokumentasi:
+   - Menjalankan unit test via `node:test` untuk seluruh skenario batas waktu (`15 menit`, `1 jam`, `1 jam 5 menit`, `2 jam`, `5 jam`, `1 hari`, `1 hari 5 menit`, `3 hari`, dan `expired`).
+   - Menjalankan `compile_applet` dan `lint_applet`, lalu mencatat hasil di `brain/PROGRESS.md`.
+
+Hasil yang Diharapkan:
+Setiap notifikasi peringatan kedaluwarsa yang dikirim ke WhatsApp owner tenant selalu sesuai dengan tahap dan sisa waktu sebenarnya (1 jam mengirim peringatan 1 jam, 1 hari mengirim peringatan 1 hari).
+
+---
+
+[33.0] - IMPLEMENTASI FITUR HIDE TAG GRUP WHATSAPP (HIDETAG / H / HT)
+
+- Tanggal: 2026-11-13 00:05
+- Status: Completed
+
+Tujuan:
+Menambahkan fitur Hide Tag khusus di dalam grup WhatsApp (yang di-whitelist) yang memungkinkan Admin Grup melakukan tag tersembunyi ke seluruh anggota grup dalam satu pesan tanpa memunculkan daftar `@nomor` di isi pesan.
+
+Rencana yang Disepakati:
+1. Pemicu Command & Prefix:
+   - Command yang didukung: `hidetag`, `h`, dan `ht` (case-insensitive) dengan seluruh prefix aktif bot (`ALLOWED_PREFIXES`: `/`, `.`, `!`, `?`, `#`, `$`, `%`, `&`).
+   - Didaftarkan pula ke `reservedWords` di `messageDispatcher.ts` agar tidak dianggap sebagai pencarian nama produk.
+2. Pembatasan Akses & Respon Penolakan:
+   - Hanya berlaku di dalam grup (`@g.us`, sudah ter-whitelist) dan hanya dapat dipicu oleh **Admin Grup** (`admin` atau `superadmin`).
+   - Validasi admin mendukung addressing mode **PN (`@s.whatsapp.net`)** maupun **LID (`@lid`)** secara ganda (`m.key.participant`, `m.key.participantAlt`, dan `sock.user` saat `fromMe`) terhadap field `id`, `lid`, dan `phoneNumber` pada `sock.groupMetadata`.
+   - Jika dijalankan di chat pribadi (DM), oleh anggota non-admin, atau tanpa pesan/reply apa pun: bot diam/mengabaikan secara senyap tanpa mengirim pesan penolakan.
+3. Dukungan Teks Langsung & Reply Pesan/Media:
+   - Mendukung teks langsung setelah command (misal: `.ht Pengumuman penting!`).
+   - Mendukung mode reply (mengutip pesan yang sudah ada di grup):
+     * Jika me-reply pesan teks (misal hanya mengetik `.ht`), bot mengirim ulang teks dari pesan yang di-reply dengan mention tersembunyi ke seluruh anggota.
+     * Jika me-reply pesan media (`image`, `video`, `audio`, `sticker`, `document`), bot mengunduh media tersebut via `@itsliaaa/baileys` (`downloadMediaMessage`) dan mengirimkannya ulang dengan mention tersembunyi (memakai teks argumen baru sebagai caption jika diisi, atau mempertahankan caption asli jika kosong).
+4. Aktivasi:
+   - Berjalan langsung lewat command tanpa menu tambahan di Dashboard Bot.
+5. Pengujian & Verifikasi:
+   - Unit test `node:test` untuk utilitas Hide Tag (normalisasi JID, deteksi admin PN/LID/fromMe, ekstraksi participant JID, ekstraksi konten & media pesan yang di-reply).
+   - Verifikasi `compile_applet` dan `lint_applet` bersih tanpa error.
+
+Hasil yang Diharapkan:
+Admin grup dapat mengumumkan informasi ke seluruh anggota grup secara cepat, rapi, dan tanpa spam `@nomor`, baik dengan mengetik pesan baru maupun me-reply pesan/media yang sudah ada.
+
+---
+
+[34.0] - IMPLEMENTASI TOGGLE GRUP ONLY DI MANAGEMENT GROUP, SESI ORDER 3 MENIT, DAN TOMBOL CTA URL ADMIN INVOICE
+
+- Tanggal: 2026-11-13 00:32
+- Status: Completed
+
+Tujuan:
+Menambahkan saklar kontrol **"Grup Only"** (ON/OFF) pada tab Management Group untuk melindungi nomor WhatsApp bot dari deteksi spam/pemblokiran saat membalas chat pribadi (DM), sambil memastikan proses order yang dimulai dari grup hingga pembayaran DM tetap berjalan lancar.
+
+Rencana yang Disepakati:
+1. Saklar & Peringatan Keamanan di Tab Management Group (`TabGrup.tsx` + `useWhatsAppGroups.ts`):
+   - Menambahkan tombol switch **Grup Only** berstatus **ON / OFF** (default bawaan: **OFF**).
+   - Menampilkan pemberitahuan rekomendasi keamanan agar pengguna mengaktifkan mode **Grup Only (ON)** karena WhatsApp berisiko memblokir atau menangguhkan nomor yang terdeteksi sebagai bot di chat pribadi.
+   - Tersimpan otomatis per tenant di SQLite (`bot_settings`, key `group_only`) melalui `GET /api/bot/groups` dan `POST /api/bot/groups/group-only`.
+2. Pembatasan Chat Pribadi (DM) Saat **Grup Only = ON**:
+   - Seluruh perintah atau pesan pemicu awal di DM (`.menu`, `.list`, `.ht`, nama produk, dropdown, quick reply, chat biasa) **diabaikan total / bot diam** tanpa membalas apa pun agar aman dari risiko banned WhatsApp.
+   - **Pengecualian Sesi Order dari Grup**: Jika pembeli memulai order di grup whitelist, interaksi lanjutan di DM (tombol `checkout_promo`, `checkout_direct`, input kode promo, `PROMO`, `BAYAR`, `BATAL`) tetap dilayani.
+   - Jika pembeli menekan tombol checkout setelah sesi berakhir, bot tetap mengirimkan pemberitahuan bahwa sesi transaksi telah berakhir (`sessionExpiredText`).
+3. Pembaruan Durasi Sesi Checkout Menjadi 3 Menit:
+   - Memperpanjang masa aktif `activeCheckoutSessions` dari 90 detik menjadi **3 menit (`3 * 60 * 1000` ms)**.
+   - Menyesuaikan teks template bawaan serta keterangan UI dari `90 detik` / `90s` menjadi `3 menit`.
+4. Tombol "Hubungi Admin" Invoice Menggunakan `cta_url`:
+   - Mengubah tombol `📞 Hubungi Admin` pada pesan invoice LunasQRIS menjadi tombol bertipe **`cta_url`** (`url: https://wa.me/{nomer_admin}`, fallback ke `ownerNumber` jika `adminNumber` kosong) sehingga pembeli langsung terhubung ke chat WhatsApp admin tanpa memicu balasan bot di DM.
+5. Pengujian & Verifikasi:
+   - Unit test `node:test` untuk gatekeeper DM (`dmFilterUtils.test.ts`), pengecualian sesi order grup, pemberitahuan sesi expired, konstanta 3 menit, dan pembuat tombol `cta_url`.
+   - Verifikasi `compile_applet`, `lint_applet`, dan inspeksi visual browser (Desktop & Mobile) pada tab **Management group**.
+
+---
+
+[35.0] - PENGELOLAAN MULTI MASTER ADMIN & DISTRIBUSI PROBABILITAS RANGE SLIDER DI PENGATURAN MASTER
+
+- Tanggal: 2026-11-13 03:32
+- Status: Completed
+
+Tujuan:
+Mengembangkan tab **Pengaturan Master** di Dashboard Master Admin agar daftar kontak Master Admin bersifat dinamis (dapat diubah, ditambah secara fleksibel lebih dari 2 nomor beserta nama admin, maupun dihapus dengan batas minimal 1 nomor aktif), dilengkapi kontrol probabilitas **Range Slider** (total terkunci 100%, auto-balance, mendukung 0%, dan tombol Simpan Pengaturan) untuk mendistribusikan rujukan tenant secara adil.
+
+Rencana yang Disepakati:
+1. Skema Database & Utilitas Distribusi (`admin-backend`):
+   - Menambahkan tabel `master_admins (id, name, phone, weight, sort_order, created_at, updated_at)` di `master.db` dengan seed otomatis admin default (`+6285712439395`, bobot `100`).
+   - Membuat modul utilitas murni `masterAdminUtils.ts` + unit test `masterAdminUtils.test.ts` untuk normalisasi nomor Indonesia (`+628...` / `628...`), pemerataan bobot (`equalizeWeights`), penyeimbangan otomatis slider (`rebalanceWeights`, total selalu 100%, mendukung 0%), validasi daftar admin, dan pemilihan acak berbobot (`pickWeightedMasterAdmin`).
+2. Service & API Endpoint (`admin-backend` & `backend`):
+   - Endpoint Master Admin (`GET /api/admin/master-admins` dan `PUT /api/admin/master-admins`) untuk membaca dan menyimpan daftar Master Admin beserta bobot probabilitasnya via tombol Simpan.
+   - Endpoint rujukan tenant (`GET /api/auth/master-admin-contact`) yang mengembalikan 1 kontak Master Admin hasil acak berbobot menggunakan `crypto.randomInt`.
+3. Integrasi Rujukan Tenant & Notifikasi Expired:
+   - Memperbarui `expiryWarningService.ts` agar tombol `Perpanjang Masa Sewa` pada pesan WhatsApp peringatan kedaluwarsa memilih nomor Master Admin secara acak berbobot dari database.
+   - Memperbarui `SuspendedAccountModal.tsx` agar mengambil 1 kontak Master Admin dari server saat modal dibuka dan mengunci nomor tersebut selama tampilan terbuka (diacak ulang saat halaman dimuat ulang).
+4. Antarmuka Tab "Pengaturan Master" (`TabMasterSettings.tsx`):
+   - Menampilkan kartu tiap Master Admin berisi input Nama Admin, input Nomor WhatsApp (`+62` + `8...`), **Range Slider** (`0%` - `100%`) dengan auto-balance ke total 100%, serta tombol Hapus (terkunci jika hanya tersisa 1 admin).
+   - Menambahkan tombol **"+ Tambah Master Admin"**, **"Bagi Rata"** (misal 50%/50%), bar visual distribusi total 100%, dan tombol **"Simpan Pengaturan"**.
+5. Pengujian & Verifikasi:
+   - Unit test `node:test`, `compile_applet`, `lint_applet`, uji API, dan inspeksi browser headless Desktop & Mobile pada `/admin/` tab Pengaturan Master.
+
+Hasil yang Diharapkan:
+Admin dapat mengatur banyak kontak Master Admin dengan bobot range slider secara presisi (default adil 50/50 saat 2 admin, atau persentase kustom termasuk 0%) melalui tombol Simpan, dan seluruh rujukan tenant otomatis membagikan beban layanan sesuai proporsi tersebut.
+
+

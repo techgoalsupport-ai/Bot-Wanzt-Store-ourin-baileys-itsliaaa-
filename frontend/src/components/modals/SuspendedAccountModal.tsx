@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { AlertTriangle, MessageCircle, LogOut, ShieldAlert, X } from 'lucide-react';
 import { getMasterAdminWaLink, MASTER_ADMIN_PHONE } from '../../config/adminContact';
 
@@ -14,8 +15,32 @@ export const SuspendedAccountModal: React.FC<SuspendedAccountModalProps> = ({
   onLogout,
   onCloseTemporary,
 }) => {
-  const waMessage = `Halo Master Admin, saya pemilik toko *${storeName || tenantUsername || 'Toko Saya'}* (username: ${tenantUsername || '-'}). Akun toko saya saat ini ditangguhkan (suspended). Mohon bantuan untuk mengaktifkan kembali akun dan bot WhatsApp saya. Terima kasih.`;
-  const waLink = getMasterAdminWaLink(waMessage);
+  const [assignedAdmin, setAssignedAdmin] = useState<{ name: string; phone: string }>({
+    name: 'Master Admin',
+    phone: MASTER_ADMIN_PHONE,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/auth/master-admin-contact')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data?.success && data?.admin?.phone) {
+          setAssignedAdmin({
+            name: String(data.admin.name || 'Master Admin'),
+            phone: String(data.admin.phone),
+          });
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const waMessage = `Halo ${assignedAdmin.name}, saya pemilik toko *${storeName || tenantUsername || 'Toko Saya'}* (username: ${tenantUsername || '-'}). Akun toko saya saat ini ditangguhkan (suspended). Mohon bantuan untuk mengaktifkan kembali akun dan bot WhatsApp saya. Terima kasih.`;
+  const waLink = getMasterAdminWaLink(waMessage, assignedAdmin.phone);
 
   return (
     <div
@@ -83,8 +108,8 @@ export const SuspendedAccountModal: React.FC<SuspendedAccountModalProps> = ({
               <span className="font-mono font-medium text-slate-800">{tenantUsername || '-'}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-500">Kontak Admin:</span>
-              <span className="font-mono font-semibold text-indigo-700">{MASTER_ADMIN_PHONE}</span>
+              <span className="text-slate-500">Kontak Admin ({assignedAdmin.name}):</span>
+              <span className="font-mono font-semibold text-indigo-700">{assignedAdmin.phone}</span>
             </div>
           </div>
 

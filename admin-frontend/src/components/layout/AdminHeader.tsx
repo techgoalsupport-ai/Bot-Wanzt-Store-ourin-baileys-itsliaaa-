@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Store, ExternalLink, RefreshCw, Building2, BarChart3, Radio, ShieldCheck, LayoutTemplate, Send, Ticket } from 'lucide-react';
+import { Menu, Store, ExternalLink, RefreshCw, Building2, BarChart3, Radio, ShieldCheck, LayoutTemplate, Send, Ticket, KeyRound } from 'lucide-react';
 import { AdminNavTab } from './AdminSidebar.tsx';
 
 interface AdminHeaderProps {
@@ -40,6 +40,12 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           title: 'Management Token Lisensi',
           subtitle: 'Kelola voucher token lisensi perpanjangan masa sewa bot multi-tenant',
           icon: Ticket,
+        };
+      case 'partners':
+        return {
+          title: 'Partner & Reseller API',
+          subtitle: 'Kelola API Key mitra untuk pembuatan akun bot & token perpanjangan otomatis',
+          icon: KeyRound,
         };
       case 'stats':
         return {

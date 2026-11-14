@@ -12,6 +12,18 @@ export function useWhatsAppGroups(
   const [groupSearchQuery, setGroupSearchQuery] = useState<string>('');
   const [copiedGroupId, setCopiedGroupId] = useState<string | null>(null);
   const [togglingGroupId, setTogglingGroupId] = useState<string | null>(null);
+  const [groupOnly, setGroupOnly] = useState<boolean>(false);
+  const [isTogglingGroupOnly, setIsTogglingGroupOnly] = useState<boolean>(false);
+
+  const fetchGroupOnlyStatus = async () => {
+    try {
+      const res = await fetch('/api/bot/groups/group-only');
+      const data = await res.json();
+      if (typeof data.groupOnly === 'boolean') {
+        setGroupOnly(data.groupOnly);
+      }
+    } catch {}
+  };
 
   const fetchGroups = async () => {
     setIsLoadingGroups(true);
@@ -19,6 +31,9 @@ export function useWhatsAppGroups(
     try {
       const res = await fetch('/api/bot/groups');
       const data = await res.json();
+      if (typeof data.groupOnly === 'boolean') {
+        setGroupOnly(data.groupOnly);
+      }
       if (data.connected === false) {
         setGroupsError(data.message || 'Bot belum terhubung ke WhatsApp.');
         setGroups([]);
@@ -62,6 +77,38 @@ export function useWhatsAppGroups(
     }
   };
 
+  const handleToggleGroupOnly = async () => {
+    const prevVal = groupOnly;
+    const nextVal = !prevVal;
+    setGroupOnly(nextVal);
+    setIsTogglingGroupOnly(true);
+    try {
+      const res = await fetch('/api/bot/groups/group-only', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: nextVal }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        setGroupOnly(prevVal);
+        showToast(data.error || 'Gagal memperbarui mode Grup Only.');
+      } else {
+        const finalVal = typeof data.groupOnly === 'boolean' ? data.groupOnly : nextVal;
+        setGroupOnly(finalVal);
+        showToast(
+          finalVal
+            ? 'Mode Grup Only DIAKTIFKAN. Bot akan diam di chat pribadi (kecuali sesi order).'
+            : 'Mode Grup Only DINONAKTIFKAN. Bot dapat dipicu di grup maupun chat pribadi.'
+        );
+      }
+    } catch {
+      setGroupOnly(prevVal);
+      showToast('Koneksi gagal saat mengubah mode Grup Only.');
+    } finally {
+      setIsTogglingGroupOnly(false);
+    }
+  };
+
   const copyGroupIdToClipboard = (id: string) => {
     navigator.clipboard.writeText(id);
     setCopiedGroupId(id);
@@ -70,7 +117,15 @@ export function useWhatsAppGroups(
   };
 
   useEffect(() => {
-    if (selectedTab === 'Grup' || selectedTab === 'tab04') {
+    fetchGroupOnlyStatus();
+  }, []);
+
+  useEffect(() => {
+    if (
+      selectedTab === 'Management group' ||
+      selectedTab === 'Grup' ||
+      selectedTab === 'tab04'
+    ) {
       fetchGroups();
     }
   }, [selectedTab, botStatus]);
@@ -84,8 +139,11 @@ export function useWhatsAppGroups(
     setGroupSearchQuery,
     copiedGroupId,
     togglingGroupId,
+    groupOnly,
+    isTogglingGroupOnly,
     fetchGroups,
     handleToggleGroup,
+    handleToggleGroupOnly,
     copyGroupIdToClipboard,
   };
 }

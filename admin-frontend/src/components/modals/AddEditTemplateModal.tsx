@@ -30,7 +30,7 @@ const CATEGORY_OPTIONS: { id: TemplateCategory; label: string; desc: string }[] 
   { id: 'payment_error', label: 'Transaksi: Kendala Gateway', desc: 'Pesan saat pembuatan QRIS gateway error' },
   { id: 'order_group_notif', label: 'Notifikasi: Alur Order Grup', desc: 'Petunjuk ke pembeli saat checkout dimulai dari grup' },
   { id: 'stock_empty', label: 'Notifikasi: Stok Kosong', desc: 'Pemberitahuan stok produk habis / restock' },
-  { id: 'checkout_session_expired', label: 'Notifikasi: Sesi Checkout Habis', desc: 'Peringatan sesi interaksi transaksi kedaluwarsa 90 detik' },
+  { id: 'checkout_session_expired', label: 'Notifikasi: Sesi Checkout Habis', desc: 'Peringatan sesi interaksi transaksi kedaluwarsa 3 menit' },
   { id: 'promo_cancelled', label: 'Notifikasi: Kupon Dibatalkan', desc: 'Konfirmasi pembeli membatalkan kupon via kata BATAL' },
   { id: 'contact_owner_empty', label: 'Kontak: Owner Belum Diatur', desc: 'Balasan bot saat kontak owner toko belum diatur' },
   { id: 'contact_admin_empty', label: 'Kontak: Admin Belum Diatur', desc: 'Balasan bot saat kontak CS/admin toko belum diatur' },

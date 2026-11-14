@@ -6,6 +6,7 @@ import { getBotManager } from '../../backend/botManager.ts';
 import { TenantRecord, CreateTenantInput, CreateTenantResult, GlobalStats } from '../types/admin.types.ts';
 import { normalizeIndonesianPhone } from '../utils/phoneUtils.ts';
 import { generateCleanId, generateStructuredUsername, generateRandomPassword } from '../utils/generatorUtils.ts';
+import { resolveEffectiveTenantStatus } from './tenantExpiryUtils.ts';
 
 export class TenantService {
   static getAllTenants(): TenantRecord[] {
@@ -33,13 +34,20 @@ export class TenantService {
         botStatus = 'offline';
       }
 
+      const effectiveStatus = resolveEffectiveTenantStatus(row.status, row.expires_at, now);
+      if (effectiveStatus === 'expired' && row.status === 'active') {
+        try {
+          db.prepare("UPDATE tenants SET status = 'expired' WHERE tenant_id = ? AND status = 'active'").run(row.tenant_id);
+        } catch {}
+      }
+
       return {
         ...row,
         owner_phone: normalizeIndonesianPhone(row.owner_phone),
         days_remaining: diffDays > 0 ? diffDays : 0,
         duration_days: durationDays,
         bot_status: botStatus,
-        status: exp < now && row.status === 'active' ? ('expired' as const) : row.status,
+        status: effectiveStatus,
       };
     });
 
@@ -76,8 +84,16 @@ export class TenantService {
       botStatus = 'offline';
     }
 
+    const effectiveStatus = resolveEffectiveTenantStatus(row.status, row.expires_at, now);
+    if (effectiveStatus === 'expired' && row.status === 'active') {
+      try {
+        db.prepare("UPDATE tenants SET status = 'expired' WHERE tenant_id = ? AND status = 'active'").run(row.tenant_id);
+      } catch {}
+    }
+
     return {
       ...row,
+      status: effectiveStatus,
       owner_phone: normalizeIndonesianPhone(row.owner_phone),
       days_remaining: diffDays > 0 ? diffDays : 0,
       duration_days: durationDays,
@@ -89,28 +105,25 @@ export class TenantService {
    * Helper untuk menghitung tanggal kedaluwarsa berdasarkan jumlah dan satuan waktu
    */
   static calculateExpirationDate(baseDate: Date, amount: number, unit: string): Date {
-    const newDate = new Date(baseDate.getTime());
     const val = Math.max(0, amount);
+    const baseMs = baseDate.getTime();
 
     switch (unit) {
       case 'minutes':
-        newDate.setMinutes(newDate.getMinutes() + val);
-        break;
+        return new Date(baseMs + val * 60 * 1000);
       case 'hours':
-        newDate.setHours(newDate.getHours() + val);
-        break;
+        return new Date(baseMs + val * 60 * 60 * 1000);
       case 'weeks':
-        newDate.setDate(newDate.getDate() + val * 7);
-        break;
-      case 'months':
+        return new Date(baseMs + val * 7 * 24 * 60 * 60 * 1000);
+      case 'months': {
+        const newDate = new Date(baseMs);
         newDate.setMonth(newDate.getMonth() + val);
-        break;
+        return newDate;
+      }
       case 'days':
       default:
-        newDate.setDate(newDate.getDate() + val);
-        break;
+        return new Date(baseMs + val * 24 * 60 * 60 * 1000);
     }
-    return newDate;
   }
 
   static createTenant(input: CreateTenantInput): CreateTenantResult {

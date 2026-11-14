@@ -61,3 +61,30 @@ export interface LicenseToken {
   used_by_tenant_id?: string;
   used_at?: string;
 }
+
+export interface CollaboratorApiKey {
+  id: number;
+  name: string;
+  prefix_key: string;
+  status: 'active' | 'suspended';
+  last_used_at: string | null;
+  created_at: string;
+  usage_count?: number;
+}
+
+export interface CreatePartnerKeyResult {
+  key: CollaboratorApiKey;
+  raw_api_key: string;
+}
+
+export interface CollaboratorLog {
+  id: number;
+  collaborator_id: number;
+  collaborator_name: string;
+  action_type: 'create_tenant' | 'create_token';
+  target_id: string;
+  duration_label: string;
+  request_ip: string;
+  created_at: string;
+}
+

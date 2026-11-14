@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { BotStatusResponse } from '../types/dashboard.types';
 
 export function useBotConnection(
@@ -24,44 +24,50 @@ export function useBotConnection(
     accountStatus: 'active',
   });
 
+  const refreshStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/bot/status');
+      if (res.ok) {
+        const data: any = await res.json();
+        setBotData(data);
+
+        if (data.accountStatus && onAccountStatusChanged) {
+          onAccountStatusChanged(data.accountStatus);
+        }
+        return data;
+      }
+    } catch {}
+    return null;
+  }, [onAccountStatusChanged]);
+
   // Polling status secara real-time
   useEffect(() => {
     let hasLoadedInitialConfig = false;
     const fetchStatus = async () => {
-      try {
-        const res = await fetch('/api/bot/status');
-        if (res.ok) {
-          const data: any = await res.json();
-          setBotData(data);
+      const data = await refreshStatus();
+      if (!data) return;
 
-          // Real-time synchronization: jika status akun berubah (misal disuspend oleh admin)
-          if (data.accountStatus && onAccountStatusChanged) {
-            onAccountStatusChanged(data.accountStatus);
-          }
-
-          if (data.customCode && !customCode) {
-            setCustomCode(data.customCode);
-          }
-          if (!hasLoadedInitialConfig && data.config) {
-            hasLoadedInitialConfig = true;
-            if (onInitialConfigLoaded) {
-              onInitialConfigLoaded(data.config);
-            }
-            if (onInitialXavieraLoaded && (data.config.xavieraApiKey || data.config.xavieraBaseUrl)) {
-              onInitialXavieraLoaded(
-                data.config.xavieraApiKey || '',
-                data.config.xavieraBaseUrl || 'https://xavierastore.com/api/v1'
-              );
-            }
-          }
+      if (data.customCode && !customCode) {
+        setCustomCode(data.customCode);
+      }
+      if (!hasLoadedInitialConfig && data.config) {
+        hasLoadedInitialConfig = true;
+        if (onInitialConfigLoaded) {
+          onInitialConfigLoaded(data.config);
         }
-      } catch {}
+        if (onInitialXavieraLoaded && (data.config.xavieraApiKey || data.config.xavieraBaseUrl)) {
+          onInitialXavieraLoaded(
+            data.config.xavieraApiKey || '',
+            data.config.xavieraBaseUrl || 'https://xavierastore.com/api/v1'
+          );
+        }
+      }
     };
 
     fetchStatus();
     const interval = setInterval(fetchStatus, 1500);
     return () => clearInterval(interval);
-  }, [customCode, onAccountStatusChanged]);
+  }, [customCode, refreshStatus]);
 
   const handleStartPairing = async (e: FormEvent) => {
     e.preventDefault();
@@ -109,6 +115,8 @@ export function useBotConnection(
       } else {
         if (data.suspended && onAccountStatusChanged) {
           onAccountStatusChanged('suspended');
+        } else if (data.expired && onAccountStatusChanged) {
+          onAccountStatusChanged('expired');
         }
         showToast(data.error || 'Gagal memulai penautan');
       }
@@ -139,6 +147,8 @@ export function useBotConnection(
       } else {
         if (data.suspended && onAccountStatusChanged) {
           onAccountStatusChanged('suspended');
+        } else if (data.expired && onAccountStatusChanged) {
+          onAccountStatusChanged('expired');
         }
         showToast(data.error || 'Gagal mereset bot.');
       }
@@ -168,5 +178,6 @@ export function useBotConnection(
     handleStop,
     handleReset,
     handleCopyCode,
+    refreshStatus,
   };
 }
