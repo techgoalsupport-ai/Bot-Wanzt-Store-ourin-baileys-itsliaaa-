@@ -1207,4 +1207,50 @@ Rencana yang Disepakati:
 Hasil yang Diharapkan:
 Admin dapat mengatur banyak kontak Master Admin dengan bobot range slider secara presisi (default adil 50/50 saat 2 admin, atau persentase kustom termasuk 0%) melalui tombol Simpan, dan seluruh rujukan tenant otomatis membagikan beban layanan sesuai proporsi tersebut.
 
+---
 
+[36.0] - PERBAIKAN STARTUP DEV SERVER, KONFIGURASI HMR/WS, DAN RESOLUSI PORT 8080/3000
+
+- Tanggal: 2026-11-13
+- Status: Completed
+
+Tujuan:
+Memastikan dev server selalu menyala cepat di port 3000 tanpa gagal startup (`EADDRINUSE` pada port `8080` atau bentrok WebSocket HMR Vite) saat aplikasi dijalankan di lingkungan preview/Cloud Run.
+
+Rencana yang Diharapkan:
+1. Memperbarui `server.ts` agar binding `httpServer.listen` langsung berjalan di awal sebelum lazy-loading `express`, `backend/app.ts`, scheduler, dan dua middleware Vite secara paralel via `Promise.all`, serta memperbarui `resolvePort()` agar mengabaikan `PORT` apabila nilainya sama dengan `NGINX_PORT` (`8080`) dan memilih `APP_PORT` / `DEFAULT_APP_PORT` (`3000`).
+2. Memperbarui `vite.config.ts` dan `admin-frontend/vite.config.ts` untuk menonaktifkan `hmr` dan `ws` (`hmr: false`, `ws: false`) serta menambahkan `watch.ignored` untuk `**/database/**`, `**/auth_info_baileys/**`, dan `**/*.log`.
+3. Memverifikasi `compile_applet`, `lint_applet`, dan respons `200 OK` pada `/api/health`, `/`, dan `/admin/`.
+
+Hasil yang Diharapkan:
+Dev server menyala stabil di port 3000 dan terhubung bersih melalui proxy tanpa bentrok port atau error WebSocket.
+
+---
+
+[37.0] - POPUP KEDALUWARSA NON-DISMISSIBLE, FORM REDEEM TOKEN PERPANJANG, DAN PEMUTUSAN BOT REAL-TIME SAAT EXPIRED (SESI DISIMPAN)
+
+- Tanggal: 2026-11-13
+- Status: Completed
+
+Tujuan:
+Memastikan ketika masa sewa tenant mencapai waktu kedaluwarsa (`expires_at <= now`), sistem langsung memutus koneksi WhatsApp bot secara paksa di sisi backend (dengan tetap mempertahankan file sesi Baileys agar tidak perlu scan QR ulang setelah diperpanjang), mengunci kemampuan reconnect, dan memunculkan popup pemberitahuan expired pada Dashboard Bot Tenant yang tidak bisa ditutup secara permanen serta menyediakan form kode token perpanjangan, tombol Hubungi Master Admin (acak berbobot), tombol Keluar/Logout Akun, serta tombol close sementara khusus tahap development.
+
+Rencana yang Disepakati:
+1. Penguncian & Pemutusan Koneksi Bot Real-Time (Sesi Tetap Disimpan):
+   - Menambahkan helper evaluasi status waktu kedaluwarsa `isTenantTimestampExpired` dan `resolveEffectiveTenantStatus` (prioritas: `suspended` tetap `suspended`, `expired` tetap `expired`, `active` berubah menjadi `expired` saat `expires_at <= now`).
+   - Memperbarui `BotManager.forceDisconnect({ clearSession, reason })` agar saat diputus karena `expired` (`clearSession = false`), koneksi socket WhatsApp langsung diakhiri (`sock.end`) tanpa menghapus folder sesi `auth_info_baileys/{tenantId}` (`creds.json` tetap utuh).
+   - Menambahkan `TenantStatusService.enforceRealtimeTenantExpiry(tenantId)` dan `enforceAllExpiredTenants()` serta mengaitkannya ke:
+     * `BotManager.start()` dan event `messages.upsert` (mencegah start/koneksi ulang maupun pemrosesan pesan saat sudah expired).
+     * Endpoint `botRoutes.ts` (`/api/bot/status`, `/api/bot/start`, `/api/bot/reset`, `/api/bot/save-config`, `/api/bot/groups/group-only`) dan `authRoutes.ts` (`/api/auth/login`, `/api/auth/session`, `/api/auth/store-status`).
+     * Interval real-time ringan tiap 10 detik di `expiryWarningService.ts` (tanpa menunggu cron peringatan 5 menit).
+2. Popup Expired Terkunci dengan Form Token, Hubungi Admin, Logout & Tombol Close Sementara (Dev):
+   - Membuat komponen `ExpiredAccountModal.tsx` (`role="alertdialog"`, tidak menutup saat klik backdrop atau tekan Escape, mengunci dashboard seperti modal Suspend).
+   - Menyediakan form input token format otomatis `XXXX-XXXX-XXXX-XXXX` dan tombol **Konfirmasi Perpanjang** yang memanggil `/api/auth/redeem-token`; saat valid, masa sewa diperpanjang, status akun kembali `active`, status dashboard disegarkan, dan popup tertutup otomatis.
+   - Menyediakan tombol **Hubungi Master Admin** (mengambil 1 kontak acak berbobot dari `/api/auth/master-admin-contact`) dan tombol **Keluar / Logout Akun** (menyamai alur popup Suspend).
+   - Menyertakan tombol close sementara untuk tahap development (**Tutup Sementara** dan tombol `X`) yang hanya menyembunyikan overlay di sesi memory saat ini (kembali terkunci saat reload atau expired baru) serta mengunci tombol Pairing/Reset di tab Koneksi Bot selama status masih `expired`.
+   - Menambahkan watcher `setTimeout` real-time pada `TenantDashboard.tsx` berdasarkan `expiresAt` dan menahan `MandatoryStoreSetupModal` agar hanya tampil jika `accountStatus === 'active'`.
+3. Pengujian & Verifikasi:
+   - Unit test `tenantExpiryUtils.test.ts` dan `tokenInputUtils.test.ts`, uji integrasi backend real-time disconnect + simpan sesi + redeem token, `compile_applet`, `lint_applet`, dan verifikasi browser headless Desktop & Mobile.
+
+Hasil yang Diharapkan:
+Tenant yang masa sewanya habis langsung terputus botnya secara real-time tanpa kehilangan kredensial sesi QR, tidak dapat menjalankan bot sebelum memperpanjang masa aktif, dan dapat langsung memasukkan kode token perpanjangan pada popup terkunci hingga otomatis terbuka kembali.

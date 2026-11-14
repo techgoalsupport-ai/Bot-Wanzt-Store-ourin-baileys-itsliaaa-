@@ -2809,6 +2809,95 @@ Halaman Pengaturan Master tampil bersih dan lapang di Desktop maupun Mobile tanp
 Kendala:
 Tidak ada.
 
+---
 
+[46.0] - PERBAIKAN STARTUP DEV SERVER, KONFIGURASI VITE WS/HMR, DAN RESOLUSI KONFLIK PORT
 
+- Tanggal: 2026-11-13
+- Status: Completed
+Referensi LANGKAH_IMPLEMENTASI: 65.0
+Referensi SCHEDULE: 36.0
 
+Pekerjaan yang Dilakukan:
+1. Perbaikan Resolusi Port & Lazy Startup ("server.ts"):
+   - Memperbarui `resolvePort()` untuk mendukung flag `--port`, memprioritaskan `APP_PORT` / `DEFAULT_APP_PORT` (`3000`), dan mengabaikan `process.env.PORT` saat nilainya sama dengan `NGINX_PORT` (`8080`) sehingga menghindari bentrok `EADDRINUSE: 0.0.0.0:8080`.
+   - Melakukan binding `httpServer.listen` segera di awal dan memuat `express`, `backend/app.ts`, `expiryWarningService.ts`, serta kedua middleware Vite secara paralel melalui `Promise.all`.
+2. Konfigurasi Vite Tanpa Konflik WebSocket ("vite.config.ts", "admin-frontend/vite.config.ts"):
+   - Menambahkan `hmr: false as const`, `ws: false as const`, serta `watch.ignored` untuk `**/database/**`, `**/auth_info_baileys/**`, dan `**/*.log`.
+3. Verifikasi & Pengujian:
+   - Menjalankan `compile_applet`, `lint_applet`, dan `restart_dev_server`.
+   - Memverifikasi respons `200 OK` pada `/api/health`, `/`, `/admin/`, serta proxy port `8080`.
+
+File yang Diubah:
+- "server.ts"
+- "vite.config.ts"
+- "admin-frontend/vite.config.ts"
+- "brain/SCHEDULE.md", "brain/LANGKAH_IMPLEMENTASI.md", "brain/PROGRESS.md"
+
+Alasan Perubahan:
+Menyelesaikan kegagalan startup dev server akibat bentrokan port `8080` dari environment Cloud Run serta potensi gangguan koneksi WebSocket Vite di lingkungan iFrame.
+
+Hasil:
+Dev server berjalan cepat, stabil di port `3000`, dan seluruh endpoint maupun halaman frontend merespons `200 OK`.
+
+Kendala:
+Tidak ada.
+
+---
+
+[47.0] - IMPLEMENTASI POPUP EXPIRED TERKUNCI, FORM REDEEM TOKEN, DAN FORCE DISCONNECT REAL-TIME (SESI DISIMPAN)
+
+- Tanggal: 2026-11-13
+- Status: Completed
+Referensi LANGKAH_IMPLEMENTASI: 66.0
+Referensi SCHEDULE: 37.0
+
+Pekerjaan yang Dilakukan:
+1. Utilitas Evaluasi Expired & Format Token ("admin-backend/services/tenantExpiryUtils.ts", "admin-backend/services/tenantExpiryUtils.test.ts", "frontend/src/utils/tokenInputUtils.ts", "frontend/src/utils/tokenInputUtils.test.ts"):
+   - Membuat `isTenantTimestampExpired` dan `resolveEffectiveTenantStatus` untuk mengevaluasi kedaluwarsa berbasis `expires_at` tanpa menimpa status `suspended`.
+   - Membuat `formatVoucherTokenInput` dan `validateVoucherTokenInput` untuk pemformatan otomatis kode voucher `XXXX-XXXX-XXXX-XXXX`.
+   - Menambahkan unit test untuk kedua modul utilitas (4 test, seluruhnya lulus).
+2. Pemutusan Koneksi Bot Real-Time Dengan Sesi Tetap Disimpan ("admin-backend/services/tenantStatusService.ts", "admin-backend/services/tenantService.ts", "admin-backend/services/tokenService.ts", "backend/botManager.ts", "backend/routes/botRoutes.ts", "backend/routes/authRoutes.ts", "backend/services/expiryWarningService.ts"):
+   - Memperbarui `BotManager.forceDisconnect({ clearSession, reason })` agar pemutusan akibat `expired` (`clearSession = false`) memanggil `sock.end` namun mempertahankan folder sesi `auth_info_baileys/{tenantId}` (`creds.json` tetap tersimpan untuk reconnect setelah perpanjangan).
+   - Menambahkan `disconnectBotForStatus`, `enforceRealtimeTenantExpiry`, dan `enforceAllExpiredTenants` pada `TenantStatusService`.
+   - Memasang guard real-time di `BotManager.start()`, `messages.upsert`, endpoint bot (`/api/bot/status`, `/api/bot/start`, `/api/bot/reset`, `/api/bot/save-config`, `/api/bot/groups/group-only`), serta endpoint auth (`/api/auth/login`, `/api/auth/session`, `/api/auth/store-status`).
+   - Menambahkan interval `10 detik` (`realtimeExpiryInterval`) di `expiryWarningService.ts` untuk mendeteksi dan memutus bot tenant expired secara real-time tanpa menunggu jadwal peringatan 5 menit.
+   - Memastikan `TokenService.redeemToken()` mengizinkan tenant `active` dan `expired` memperpanjang masa aktif, namun tetap menolak tenant `suspended`.
+3. Popup Expired Terkunci & Integrasi Dashboard Tenant ("frontend/src/components/modals/ExpiredAccountModal.tsx", "frontend/src/hooks/useBotConnection.ts", "frontend/src/components/dashboard/TenantDashboard.tsx", "frontend/src/components/tabs/TabConnectionDedicated.tsx"):
+   - Membuat `ExpiredAccountModal.tsx` (`role="alertdialog"`, tidak bisa ditutup klik backdrop/Escape) berisi detail waktu kedaluwarsa WIB, form kode token `XXXX-XXXX-XXXX-XXXX` + tombol **Konfirmasi Perpanjang**, tombol **Hubungi Master Admin** (acak berbobot dari `/api/auth/master-admin-contact`), tombol **Keluar / Logout Akun**, serta tombol close sementara khusus tahap development (**Tutup Sementara** dan `X`).
+   - Menambahkan `setTimeout` real-time di `TenantDashboard.tsx` untuk memicu penguncian langsung ketika `expiresAt` tercapai, menahan `MandatoryStoreSetupModal` saat akun tidak `active`, dan otomatis menutup popup + memuat ulang status ketika token berhasil diredeem.
+   - Menambahkan banner peringatan kedaluwarsa serta mengunci tombol Pairing/Reset di `TabConnectionDedicated.tsx` selama status masih `expired`.
+4. Verifikasi & Pengujian:
+   - Unit test `npx --yes tsx --test admin-backend/services/tenantExpiryUtils.test.ts frontend/src/utils/tokenInputUtils.test.ts` (4 pass, 0 fail).
+   - Verifikasi `compile_applet` dan `lint_applet` lulus 100% tanpa error (termasuk perbaikan tipe string pada `formatExpiryDateTimeWIB` di `ExpiredAccountModal.tsx`).
+   - Uji integrasi backend via `tsx` memverifikasi `enforceRealtimeTenantExpiry` memanggil `sock.end()`, menandai bot `closed`, mempertahankan `creds.json`, menolak `bot.start()`, dan memulihkan status menjadi `active` saat `TokenService.redeemToken` dipanggil.
+   - Uji browser Playwright pada Desktop (`1440x900`) dan Mobile (`390x844`): memastikan `ExpiredAccountModal` tampil mengunci tanpa overflow mobile, penolakan token tidak valid, tombol **Tutup Sementara** membuka tampilan sementara dengan tab Koneksi Bot terkunci, reload halaman kembali mengunci popup, serta redeem token valid langsung menutup popup secara otomatis dan mengaktifkan akun kembali (seluruh data uji sementara sudah dibersihkan).
+
+File yang Diubah/Dibuat:
+- "admin-backend/services/tenantExpiryUtils.ts" (Baru)
+- "admin-backend/services/tenantExpiryUtils.test.ts" (Baru)
+- "admin-backend/services/tenantStatusService.ts"
+- "admin-backend/services/tenantService.ts"
+- "admin-backend/services/tokenService.ts"
+- "backend/botManager.ts"
+- "backend/routes/botRoutes.ts"
+- "backend/routes/authRoutes.ts"
+- "backend/services/expiryWarningService.ts"
+- "frontend/src/utils/tokenInputUtils.ts" (Baru)
+- "frontend/src/utils/tokenInputUtils.test.ts" (Baru)
+- "frontend/src/components/modals/ExpiredAccountModal.tsx" (Baru)
+- "frontend/src/hooks/useBotConnection.ts"
+- "frontend/src/components/dashboard/TenantDashboard.tsx"
+- "frontend/src/components/tabs/TabConnectionDedicated.tsx"
+- "brain/SCHEDULE.md", "brain/LANGKAH_IMPLEMENTASI.md", "brain/PROGRESS.md"
+
+Alasan Perubahan:
+Memastikan tenant yang masa sewanya habis langsung terputus koneksi botnya secara real-time tanpa menghapus sesi login QR, dicegah menyambungkan bot sebelum perpanjangan, dan memiliki jalur perpanjangan mandiri melalui form token di popup terkunci.
+
+Hasil:
+1. Saat masa sewa tenant kedaluwarsa, bot terputus secara real-time dalam hitungan detik dengan file sesi tetap utuh dan tidak bisa connect sebelum diperpanjang.
+2. Dashboard Bot Tenant langsung menampilkan popup expired terkunci (dengan tombol close sementara khusus dev), form token perpanjangan, tombol Hubungi Master Admin acak berbobot, dan tombol Logout.
+3. Ketika token valid dikonfirmasi, masa aktif bertambah dan popup langsung tertutup otomatis.
+
+Kendala:
+Tidak ada.
